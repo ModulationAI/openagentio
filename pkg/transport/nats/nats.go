@@ -188,6 +188,18 @@ func (d *Driver) requireConn() (*natsgo.Conn, error) {
 	return nc, nil
 }
 
+// Flush blocks until the server has acknowledged all queued protocol writes.
+// Useful before exiting a process to ensure the last Publish actually hit the
+// wire, and in tests to make a Subscribe + Publish on different connections
+// race-free.
+func (d *Driver) Flush() error {
+	nc, err := d.requireConn()
+	if err != nil {
+		return err
+	}
+	return nc.Flush()
+}
+
 func toNats(msg *transport.RawMessage) *natsgo.Msg {
 	nm := &natsgo.Msg{
 		Subject: msg.Subject,
