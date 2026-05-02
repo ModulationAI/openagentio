@@ -1,0 +1,17 @@
+{
+  "spec_version": "acp/1.0",
+  "schema_version": 1,
+  "event_id": "019de7eb-c0fe-7800-a000-000000000004",
+  "event_type": "agent.response.error",
+  "occurred_at": "2026-05-02T10:00:01.789Z",
+  "from": "main-agent",
+  "to": "user-gateway",
+  "correlation_id": "019de7eb-baab-7e67-bb77-a7a03a666140",
+  "seq": 1,
+  "is_final": true,
+  "payload": {
+    "code": "AGENT_TIMEOUT",
+    "message": "deadline exceeded",
+    "retryable": true
+  }
+}

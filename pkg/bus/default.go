@@ -1,0 +1,101 @@
+package bus
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"sync"
+	"time"
+
+	"github.com/ModulationAI/agentflowbus/pkg/codec"
+	"github.com/ModulationAI/agentflowbus/pkg/transport"
+)
+
+// ErrNotImplemented is returned by methods whose bodies are reserved for the
+// upcoming v0.1 implementation milestones. Callers can
+// `errors.Is(err, bus.ErrNotImplemented)` to detect skeleton calls in tests.
+var ErrNotImplemented = errors.New("bus: not implemented (v0.1 skeleton)")
+
+// ErrIdleTimeout is reported by a Stream when the gap between two received
+// frames exceeds the InvokeOption WithIdleTimeout deadline.
+var ErrIdleTimeout = errors.New("bus: stream idle timeout")
+
+// New constructs a Bus from the supplied options. It validates the required
+// inputs (Transport, AgentID) and connects the underlying transport.
+func New(opts ...Option) (Bus, error) {
+	o := Options{
+		SubjectPrefix:  DefaultSubjectPrefix,
+		Codec:          codec.JSON(),
+		Logger:         slog.Default(),
+		DefaultTimeout: 30 * time.Second,
+	}
+	for _, f := range opts {
+		f(&o)
+	}
+	if o.Transport == nil {
+		return nil, errors.New("bus: transport is required")
+	}
+	if o.AgentID == "" {
+		return nil, errors.New("bus: agent id is required")
+	}
+	if err := o.Transport.Connect(context.Background()); err != nil {
+		return nil, err
+	}
+	b := &defaultBus{opts: o}
+	b.lifeCtx, b.cancel = context.WithCancel(context.Background())
+	return b, nil
+}
+
+type defaultBus struct {
+	opts Options
+
+	mu      sync.Mutex
+	owned   []transport.Subscription // bus-owned subs from HandleInvoke / HandleStream
+	lifeCtx context.Context
+	cancel  context.CancelFunc
+	closed  bool
+}
+
+func (b *defaultBus) trackOwned(s transport.Subscription) {
+	b.mu.Lock()
+	b.owned = append(b.owned, s)
+	b.mu.Unlock()
+}
+
+func (b *defaultBus) Close() error {
+	b.mu.Lock()
+	if b.closed {
+		b.mu.Unlock()
+		return nil
+	}
+	b.closed = true
+	owned := b.owned
+	b.owned = nil
+	b.mu.Unlock()
+
+	if b.cancel != nil {
+		b.cancel()
+	}
+
+	var firstErr error
+	for _, s := range owned {
+		if err := s.Unsubscribe(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	if b.opts.Transport != nil {
+		if err := b.opts.Transport.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
+// subscription is the bus-side wrapper around transport.Subscription. It
+// satisfies bus.Subscription; the bus does not track its lifecycle (caller
+// owns it and is expected to Unsubscribe).
+type subscription struct {
+	sub transport.Subscription
+}
+
+func (s *subscription) Unsubscribe() error { return s.sub.Unsubscribe() }

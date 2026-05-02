@@ -1,0 +1,14 @@
+{
+  "spec_version": "acp/1.0",
+  "schema_version": 1,
+  "event_id": "019de7eb-c0fe-7800-a000-000000000003",
+  "event_type": "agent.response.final",
+  "occurred_at": "2026-05-02T10:00:01.789Z",
+  "from": "main-agent",
+  "to": "user-gateway",
+  "correlation_id": "019de7eb-baab-7e67-bb77-a7a03a666140",
+  "session_id": "sess_demo",
+  "seq": 3,
+  "is_final": true,
+  "payload": {"result": {"answer": "42"}}
+}

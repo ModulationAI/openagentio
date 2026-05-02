@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentflowbus.dev/schema/envelope.schema.json",
+  "title": "AgentFlowBus Envelope",
+  "description": "Wire-level container for every message routed by the AgentFlowBus runtime. Mirrors prompts/design.md §3.1.",
+  "type": "object",
+  "required": [
+    "spec_version",
+    "schema_version",
+    "event_id",
+    "event_type",
+    "occurred_at"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "spec_version": {
+      "type": "string",
+      "pattern": "^acp/\\d+\\.\\d+$",
+      "description": "Protocol major.minor version, e.g. \"acp/1.0\"."
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Envelope structure version, monotonically increasing."
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "description": "Globally unique. UUIDv7 preferred (RFC 9562); v4 accepted as fallback."
+    },
+    "event_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Logical event identifier, e.g. \"agent.response.delta\"."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$",
+      "description": "RFC3339 timestamp, UTC preferred."
+    },
+    "trace_id": {"type": "string"},
+    "span_id": {"type": "string"},
+    "traceparent": {"type": "string"},
+    "session_id": {"type": "string"},
+    "conversation_id": {"type": "string"},
+    "correlation_id": {"type": "string"},
+    "reply_to": {"type": "string"},
+    "from": {"type": "string"},
+    "to": {"type": "string"},
+    "channel": {"type": "string"},
+    "tenant_id": {"type": "string"},
+    "user_id": {"type": "string"},
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic sequence number for streaming responses (0-based)."
+    },
+    "is_final": {
+      "type": "boolean",
+      "description": "When true, no further frames are expected on this correlation_id."
+    },
+    "payload": {
+      "description": "Business payload. Shape is determined by event_type; consult prompts/design.md §3."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Free-form extension fields. Not part of the protocol contract."
+    }
+  },
+  "$defs": {
+    "ErrorPayload": {
+      "type": "object",
+      "required": ["code", "message", "retryable"],
+      "additionalProperties": true,
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "AGENT_TIMEOUT",
+            "AGENT_UNAVAILABLE",
+            "BACKPRESSURE_DROP",
+            "TRANSPORT_FAILURE",
+            "CODEC_FAILURE",
+            "AUTH_FAILURE",
+            "INVALID_REQUEST",
+            "NO_HANDLER"
+          ]
+        },
+        "message": {"type": "string"},
+        "retryable": {"type": "boolean"},
+        "cause": {"type": "object"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"is_final": {"const": true}},
+        "required": ["is_final"]
+      },
+      "then": {
+        "properties": {
+          "event_type": {
+            "enum": [
+              "agent.response.final",
+              "agent.response.error",
+              "agent.tool.result",
+              "agent.task.completed"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"event_type": {"const": "agent.response.error"}},
+        "required": ["event_type"]
+      },
+      "then": {
+        "properties": {"payload": {"$ref": "#/$defs/ErrorPayload"}}
+      }
+    }
+  ]
+}

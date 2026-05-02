@@ -1,0 +1,237 @@
+package bus
+
+import (
+	"context"
+	"errors"
+
+	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/agentflowbus/pkg/middleware"
+	"github.com/ModulationAI/agentflowbus/pkg/transport"
+)
+
+func (b *defaultBus) Invoke(ctx context.Context, target string, payload any, opts ...InvokeOption) (*event.Envelope, error) {
+	if target == "" {
+		return nil, errors.New("bus: empty invoke target")
+	}
+	o := collectInvokeOpts(opts)
+	timeout := o.Timeout
+	if timeout == 0 {
+		timeout = b.opts.DefaultTimeout
+	}
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
+	env, err := b.buildRequestEnvelope(target, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	inbox, err := b.opts.Transport.OpenInbox(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer inbox.Close()
+	env.ReplyTo = inbox.Subject()
+
+	data, err := b.opts.Codec.EncodeEnvelope(env)
+	if err != nil {
+		return nil, err
+	}
+	if err := b.opts.Transport.Publish(ctx, &transport.RawMessage{
+		Subject: b.invokeSubject(target, b.resolveTenant(env.TenantID)),
+		Data:    data,
+	}); err != nil {
+		return nil, err
+	}
+
+	msg, err := inbox.Recv(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return b.opts.Codec.DecodeEnvelope(msg.Data)
+}
+
+func (b *defaultBus) HandleInvoke(target string, h InvokeHandler, opts ...HandleOption) error {
+	if target == "" {
+		return errors.New("bus: empty invoke target")
+	}
+	if h == nil {
+		return errors.New("bus: nil invoke handler")
+	}
+	o := collectHandleOpts(opts)
+	subject := b.invokeSubject(target, b.opts.Tenant)
+
+	dispatch := func(ctx context.Context, msg *transport.RawMessage) error {
+		env, err := b.opts.Codec.DecodeEnvelope(msg.Data)
+		if err != nil {
+			return err
+		}
+		return b.handleOne(ctx, env, h)
+	}
+
+	sub, err := b.opts.Transport.Subscribe(b.lifeCtx, subject, o.Queue, dispatch)
+	if err != nil {
+		return err
+	}
+	b.trackOwned(sub)
+	return nil
+}
+
+// handleOne wraps the user's InvokeHandler in the middleware chain, captures
+// its return value through a closure, and publishes the response envelope to
+// req.ReplyTo. If the request has no ReplyTo we still run the handler (for
+// observability/side effects) but skip the publish.
+func (b *defaultBus) handleOne(ctx context.Context, req *event.Envelope, h InvokeHandler) error {
+	var (
+		result any
+		userErr error
+	)
+	chained := middleware.Chain(middleware.Handler(func(ctx context.Context, e *event.Envelope) error {
+		result, userErr = h(ctx, e)
+		return userErr
+	}), b.opts.Middleware...)
+
+	mwErr := chained(ctx, req)
+
+	if req.ReplyTo == "" {
+		// Fire-and-forget invocation: nothing to reply to.
+		return mwErr
+	}
+
+	var resp *event.Envelope
+	switch {
+	case mwErr != nil:
+		resp = b.errorResponse(req, mwErr)
+	case isEnvelope(result):
+		resp = adoptResponse(b.opts.AgentID, req, result.(*event.Envelope))
+	default:
+		resp, mwErr = b.finalResponse(req, result)
+		if mwErr != nil {
+			resp = b.errorResponse(req, mwErr)
+		}
+	}
+
+	data, err := b.opts.Codec.EncodeEnvelope(resp)
+	if err != nil {
+		return err
+	}
+	return b.opts.Transport.Publish(ctx, &transport.RawMessage{
+		Subject: req.ReplyTo,
+		Data:    data,
+	})
+}
+
+func (b *defaultBus) buildRequestEnvelope(target string, payload any) (*event.Envelope, error) {
+	if e, ok := payload.(*event.Envelope); ok {
+		env := e.Clone()
+		if env.From == "" {
+			env.From = b.opts.AgentID
+		}
+		if env.To == "" {
+			env.To = target
+		}
+		if env.TenantID == "" {
+			env.TenantID = b.opts.Tenant
+		}
+		return env, nil
+	}
+
+	env := event.New(event.MessageReceived)
+	env.From = b.opts.AgentID
+	env.To = target
+	env.TenantID = b.opts.Tenant
+	if payload != nil {
+		data, err := b.opts.Codec.EncodePayload(payload)
+		if err != nil {
+			return nil, err
+		}
+		env.Payload = data
+	}
+	return env, nil
+}
+
+func (b *defaultBus) finalResponse(req *event.Envelope, payload any) (*event.Envelope, error) {
+	resp := newReplyShell(b.opts.AgentID, req, event.ResponseFinal)
+	resp.IsFinal = true
+	if payload != nil {
+		data, err := b.opts.Codec.EncodePayload(payload)
+		if err != nil {
+			return nil, err
+		}
+		resp.Payload = data
+	}
+	return resp, nil
+}
+
+func (b *defaultBus) errorResponse(req *event.Envelope, srcErr error) *event.Envelope {
+	resp := newReplyShell(b.opts.AgentID, req, event.ResponseError)
+	resp.IsFinal = true
+	payload := event.ErrorPayload{
+		Code:    event.CodeAgentUnavailable,
+		Message: srcErr.Error(),
+	}
+	data, _ := b.opts.Codec.EncodePayload(payload)
+	resp.Payload = data
+	return resp
+}
+
+// newReplyShell pre-populates a response envelope with correlation metadata
+// copied from req, leaving Payload/IsFinal for the caller to fill in.
+func newReplyShell(agentID string, req *event.Envelope, eventType string) *event.Envelope {
+	resp := event.New(eventType)
+	resp.From = agentID
+	resp.To = req.From
+	resp.SessionID = req.SessionID
+	resp.ConversationID = req.ConversationID
+	resp.TenantID = req.TenantID
+	resp.UserID = req.UserID
+	resp.Channel = req.Channel
+	resp.TraceID = req.TraceID
+	resp.SpanID = req.SpanID
+	resp.Traceparent = req.Traceparent
+	resp.CorrelationID = req.EventID
+	return resp
+}
+
+// adoptResponse merges fields from the user-supplied response envelope with
+// correlation metadata from the request, preferring the user's values when
+// they are explicitly set.
+func adoptResponse(agentID string, req, user *event.Envelope) *event.Envelope {
+	resp := user.Clone()
+	if resp.From == "" {
+		resp.From = agentID
+	}
+	if resp.To == "" {
+		resp.To = req.From
+	}
+	if resp.CorrelationID == "" {
+		resp.CorrelationID = req.EventID
+	}
+	if resp.SessionID == "" {
+		resp.SessionID = req.SessionID
+	}
+	if resp.ConversationID == "" {
+		resp.ConversationID = req.ConversationID
+	}
+	if resp.TenantID == "" {
+		resp.TenantID = req.TenantID
+	}
+	if resp.TraceID == "" {
+		resp.TraceID = req.TraceID
+	}
+	if resp.Traceparent == "" {
+		resp.Traceparent = req.Traceparent
+	}
+	if !resp.IsFinal && event.IsTerminal(resp.EventType) {
+		resp.IsFinal = true
+	}
+	return resp
+}
+
+func isEnvelope(v any) bool {
+	_, ok := v.(*event.Envelope)
+	return ok
+}
