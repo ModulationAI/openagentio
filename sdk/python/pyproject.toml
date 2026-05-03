@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agentflowbus"
+version = "0.2.0a0"
+description = "Python SDK for AgentFlowBus — ACP-compatible Envelope protocol on top of NATS / asyncio."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "ModulationAI" },
+]
+keywords = ["agent", "bus", "nats", "acp", "asyncio"]
+dependencies = [
+  "nats-py>=2.6",
+]
+
+[project.optional-dependencies]
+validation = ["jsonschema>=4.21"]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "jsonschema>=4.21",
+]
+
+[project.urls]
+Homepage = "https://github.com/ModulationAI/agentflowbus"
+Repository = "https://github.com/ModulationAI/agentflowbus"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agentflowbus"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra"

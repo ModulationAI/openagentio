@@ -1,0 +1,61 @@
+"""ACP envelope and event-type definitions. Wire-equivalent to Go's pkg/event."""
+
+from agentflowbus.event.envelope import Envelope
+from agentflowbus.event.ids import new_id
+from agentflowbus.event.payload import (
+    CodeAgentTimeout,
+    CodeAgentUnavailable,
+    CodeAuthFailure,
+    CodeBackpressureDrop,
+    CodeCodecFailure,
+    CodeInvalidRequest,
+    CodeNoHandler,
+    CodeTransportFailure,
+    DeltaPayload,
+    ErrorPayload,
+    FinalPayload,
+    StartedPayload,
+)
+from agentflowbus.event.types import (
+    MessageReceived,
+    ResponseDelta,
+    ResponseError,
+    ResponseFinal,
+    ResponseStarted,
+    SCHEMA_VERSION,
+    SPEC_VERSION,
+    TaskCompleted,
+    TaskCreated,
+    ToolCall,
+    ToolResult,
+    is_terminal,
+)
+
+__all__ = [
+    "Envelope",
+    "new_id",
+    "is_terminal",
+    "SPEC_VERSION",
+    "SCHEMA_VERSION",
+    "MessageReceived",
+    "ResponseStarted",
+    "ResponseDelta",
+    "ResponseFinal",
+    "ResponseError",
+    "ToolCall",
+    "ToolResult",
+    "TaskCreated",
+    "TaskCompleted",
+    "StartedPayload",
+    "DeltaPayload",
+    "FinalPayload",
+    "ErrorPayload",
+    "CodeAgentTimeout",
+    "CodeAgentUnavailable",
+    "CodeBackpressureDrop",
+    "CodeTransportFailure",
+    "CodeCodecFailure",
+    "CodeAuthFailure",
+    "CodeInvalidRequest",
+    "CodeNoHandler",
+]
