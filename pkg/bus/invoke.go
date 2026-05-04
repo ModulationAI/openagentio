@@ -36,6 +36,7 @@ func (b *defaultBus) Invoke(ctx context.Context, target string, payload any, opt
 	defer inbox.Close()
 	env.ReplyTo = inbox.Subject()
 
+	b.prepareEnvelope(ctx, env)
 	data, err := b.opts.Codec.EncodeEnvelope(env)
 	if err != nil {
 		return nil, err

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ModulationAI/agentflowbus/pkg/codec"
+	"github.com/ModulationAI/agentflowbus/pkg/event"
 	"github.com/ModulationAI/agentflowbus/pkg/transport"
 )
 
@@ -99,3 +100,20 @@ type subscription struct {
 }
 
 func (s *subscription) Unsubscribe() error { return s.sub.Unsubscribe() }
+
+// prepareEnvelope runs every registered EnvelopePreparer against e, in
+// registration order. It is the single chokepoint that outbound paths
+// (Publish / Invoke / StreamInvoke) call just before EncodeEnvelope so a
+// preparer like the OpenTelemetry bridge can stamp traceparent on the
+// envelope without each call site reaching into the OTel API directly.
+func (b *defaultBus) prepareEnvelope(ctx context.Context, e *event.Envelope) {
+	if e == nil {
+		return
+	}
+	for _, p := range b.opts.EnvelopePreparers {
+		if p == nil {
+			continue
+		}
+		p(ctx, e)
+	}
+}

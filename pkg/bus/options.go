@@ -1,10 +1,12 @@
 package bus
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
 	"github.com/ModulationAI/agentflowbus/pkg/codec"
+	"github.com/ModulationAI/agentflowbus/pkg/event"
 	"github.com/ModulationAI/agentflowbus/pkg/middleware"
 	"github.com/ModulationAI/agentflowbus/pkg/transport"
 )
@@ -14,16 +16,29 @@ import (
 // `agent.*` namespaces.
 const DefaultSubjectPrefix = "acp.v1"
 
+// EnvelopePreparer mutates an outbound envelope just before it is encoded
+// onto the wire. The chain runs for every Bus.Publish / Invoke / StreamInvoke
+// call, in registration order, so a later preparer observes the mutations of
+// earlier ones. The canonical use case is the OpenTelemetry bridge in
+// pkg/middleware/otel, which writes the active span's traceparent into
+// envelope.Traceparent.
+//
+// Preparers must be cheap and non-blocking — they run on the publishing
+// goroutine inside the hot path. Errors are not propagated; if a preparer
+// needs to bail, it should leave the envelope unchanged.
+type EnvelopePreparer func(ctx context.Context, e *event.Envelope)
+
 // Options bundles every Bus-level setting.
 type Options struct {
-	AgentID        string
-	Tenant         string
-	SubjectPrefix  string
-	Codec          codec.Codec
-	Transport      transport.Transport
-	Logger         *slog.Logger
-	Middleware     []middleware.Middleware
-	DefaultTimeout time.Duration
+	AgentID           string
+	Tenant            string
+	SubjectPrefix     string
+	Codec             codec.Codec
+	Transport         transport.Transport
+	Logger            *slog.Logger
+	Middleware        []middleware.Middleware
+	EnvelopePreparers []EnvelopePreparer
+	DefaultTimeout    time.Duration
 }
 
 // Option mutates Options.
@@ -41,6 +56,12 @@ func WithTransport(t transport.Transport) Option {
 
 func WithMiddleware(mw ...middleware.Middleware) Option {
 	return func(o *Options) { o.Middleware = append(o.Middleware, mw...) }
+}
+
+// WithEnvelopePreparer registers one or more preparers that run on every
+// outbound envelope just before it is encoded. See EnvelopePreparer.
+func WithEnvelopePreparer(p ...EnvelopePreparer) Option {
+	return func(o *Options) { o.EnvelopePreparers = append(o.EnvelopePreparers, p...) }
 }
 
 func WithDefaultTimeout(d time.Duration) Option {

@@ -68,6 +68,7 @@ from agentflowbus.transport import (
     Transport,
     TransportHandler,
 )
+from agentflowbus import session
 
 __version__ = "0.2.0a0"
 
@@ -121,4 +122,6 @@ __all__ = [
     "TransportHandler",
     "InMemoryDriver",
     "NATSDriver",
+    # Session / trace context (see agentflowbus.session for full API).
+    "session",
 ]

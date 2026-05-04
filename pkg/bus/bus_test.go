@@ -173,3 +173,131 @@ type stringErr string
 func (e stringErr) Error() string { return string(e) }
 
 const errBoom stringErr = "boom"
+
+// TestEnvelopePreparerRunsBeforePublish covers the OTel-style hook on each
+// outbound path (Publish, Invoke, StreamInvoke). The preparer stamps a
+// well-known traceparent value; the receiving handler asserts it landed.
+func TestEnvelopePreparerRunsBeforePublish(t *testing.T) {
+	const want = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01"
+	prep := func(_ context.Context, e *event.Envelope) {
+		e.Traceparent = want
+	}
+
+	t.Run("Publish", func(t *testing.T) {
+		b, done := newTestBus(t, "pub-agent", bus.WithEnvelopePreparer(prep))
+		defer done()
+
+		got := make(chan *event.Envelope, 1)
+		sub, err := b.Subscribe(context.Background(), event.MessageReceived,
+			func(_ context.Context, e *event.Envelope) error { got <- e; return nil })
+		if err != nil {
+			t.Fatalf("Subscribe: %v", err)
+		}
+		defer sub.Unsubscribe()
+
+		out := event.New(event.MessageReceived)
+		if err := b.Publish(context.Background(), out); err != nil {
+			t.Fatalf("Publish: %v", err)
+		}
+		select {
+		case e := <-got:
+			if e.Traceparent != want {
+				t.Fatalf("Publish traceparent = %q want %q", e.Traceparent, want)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("Publish: handler not called")
+		}
+	})
+
+	t.Run("Invoke", func(t *testing.T) {
+		b, done := newTestBus(t, "inv-agent", bus.WithEnvelopePreparer(prep))
+		defer done()
+
+		got := make(chan *event.Envelope, 1)
+		if err := b.HandleInvoke("ping", func(_ context.Context, e *event.Envelope) (any, error) {
+			got <- e
+			return map[string]string{"ok": "1"}, nil
+		}); err != nil {
+			t.Fatalf("HandleInvoke: %v", err)
+		}
+
+		if _, err := b.Invoke(context.Background(), "ping", nil); err != nil {
+			t.Fatalf("Invoke: %v", err)
+		}
+		select {
+		case e := <-got:
+			if e.Traceparent != want {
+				t.Fatalf("Invoke traceparent = %q want %q", e.Traceparent, want)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("Invoke: handler not called")
+		}
+	})
+
+	t.Run("StreamInvoke", func(t *testing.T) {
+		b, done := newTestBus(t, "str-agent", bus.WithEnvelopePreparer(prep))
+		defer done()
+
+		got := make(chan *event.Envelope, 1)
+		if err := b.HandleStream("counter", func(_ context.Context, e *event.Envelope, w bus.StreamWriter) error {
+			got <- e
+			return w.Final(map[string]int{"n": 0})
+		}); err != nil {
+			t.Fatalf("HandleStream: %v", err)
+		}
+
+		s, err := b.StreamInvoke(context.Background(), "counter", nil)
+		if err != nil {
+			t.Fatalf("StreamInvoke: %v", err)
+		}
+		defer s.Close()
+		// Drain to completion so handler returns cleanly.
+		for range s.Events() {
+		}
+		select {
+		case e := <-got:
+			if e.Traceparent != want {
+				t.Fatalf("StreamInvoke traceparent = %q want %q", e.Traceparent, want)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("StreamInvoke: handler not called")
+		}
+	})
+}
+
+// TestEnvelopePreparerOrderMatchesAppend asserts preparers run in
+// registration order and a later preparer sees mutations from earlier ones.
+func TestEnvelopePreparerOrderMatchesAppend(t *testing.T) {
+	first := func(_ context.Context, e *event.Envelope) {
+		e.Traceparent = "first"
+	}
+	second := func(_ context.Context, e *event.Envelope) {
+		// Sees the value first wrote.
+		e.Traceparent = e.Traceparent + "-second"
+	}
+
+	b, done := newTestBus(t, "order-agent",
+		bus.WithEnvelopePreparer(first),
+		bus.WithEnvelopePreparer(second))
+	defer done()
+
+	got := make(chan *event.Envelope, 1)
+	sub, err := b.Subscribe(context.Background(), event.MessageReceived,
+		func(_ context.Context, e *event.Envelope) error { got <- e; return nil })
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	defer sub.Unsubscribe()
+
+	if err := b.Publish(context.Background(), event.New(event.MessageReceived)); err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+	select {
+	case e := <-got:
+		if e.Traceparent != "first-second" {
+			t.Fatalf("traceparent = %q want %q", e.Traceparent, "first-second")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("handler not called")
+	}
+}

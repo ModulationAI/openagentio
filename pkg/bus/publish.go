@@ -17,6 +17,7 @@ func (b *defaultBus) Publish(ctx context.Context, e *event.Envelope) error {
 		return errors.New("bus: envelope missing event_type")
 	}
 	subject := b.eventSubject(e.EventType, b.resolveTenant(e.TenantID))
+	b.prepareEnvelope(ctx, e)
 	data, err := b.opts.Codec.EncodeEnvelope(e)
 	if err != nil {
 		return err

@@ -27,6 +27,7 @@ from agentflowbus.event.types import (
     ResponseFinal,
     is_terminal,
 )
+from agentflowbus.session import inject as _session_inject, reset as _session_reset
 from agentflowbus.transport.base import (
     RawMessage,
     Subscription as TransportSubscription,
@@ -197,10 +198,13 @@ class Bus:
     async def _handle_one(self, req: Envelope, handler: InvokeHandler) -> None:
         result: Any = None
         user_err: BaseException | None = None
+        token = _session_inject(req)
         try:
             result = await handler(req)
         except BaseException as e:  # noqa: BLE001
             user_err = e
+        finally:
+            _session_reset(token)
 
         if not req.reply_to:
             if user_err is not None:
@@ -302,10 +306,13 @@ class Bus:
     ) -> None:
         writer = StreamWriter(self._transport, self._codec, self._agent_id, req)
         herr: BaseException | None = None
+        token = _session_inject(req)
         try:
             await handler(req, writer)
         except BaseException as e:  # noqa: BLE001
             herr = e
+        finally:
+            _session_reset(token)
 
         if writer.closed:
             return
@@ -323,10 +330,13 @@ class Bus:
         self._owned.append(sub)
 
     async def _safe_call(self, handler: Handler, env: Envelope) -> None:
+        token = _session_inject(env)
         try:
             await handler(env)
         except BaseException as e:  # noqa: BLE001
             self._logger.warning("bus: handler error: %s", e)
+        finally:
+            _session_reset(token)
 
     def _resolve_tenant(self, envelope_tenant: str) -> str:
         return envelope_tenant or self._tenant

@@ -45,6 +45,7 @@ func (b *defaultBus) StreamInvoke(ctx context.Context, target string, payload an
 	}
 	env.ReplyTo = inbox.Subject()
 
+	b.prepareEnvelope(streamCtx, env)
 	data, err := b.opts.Codec.EncodeEnvelope(env)
 	if err != nil {
 		_ = inbox.Close()
