@@ -1,6 +1,6 @@
 <div align="center">
 <p align="center">
-<img src="https://github.com/ModulationAI/agentflowbus/blob/main/assets/logo.png?raw=true" width="600" height="200" alt="agentflowbus preview">
+<img src="https://cdn.jsdelivr.net/gh/ModulationAI/agentflowbus/assets/logo.png?raw=true" width="600" height="200" alt="agentflowbus preview">
 </p>
 </div>
 
