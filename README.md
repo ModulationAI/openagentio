@@ -25,7 +25,7 @@ AgentFlowBus addresses that layer with a small Go runtime and a protocol-first d
 
 ## Status
 
-This repository is currently at **v0.1**.
+This repository is currently at **v0.2**.
 
 Implemented:
 
@@ -36,17 +36,19 @@ Implemented:
 - `StreamInvoke` / `HandleStream`;
 - in-memory transport for tests and local examples;
 - NATS Core transport for publish, subscribe, queue groups, request/reply, and inbox streams;
-- recover, trace, and structured logging middleware.
+- recover, trace, structured logging, **retry**, and **dead-letter** middleware;
+- **OpenTelemetry** bridge (`pkg/middleware/otel`) — opt-in, no hard dependency;
+- **HTTP/SSE adapter** (`pkg/adapter/http`) for driving the bus over REST;
+- **Python SDK** (`sdk/python/`) with asyncio bus, session context propagation, and stream invoke.
 
 Not yet implemented:
 
-- JetStream persistence, ack, replay, and DLQ;
-- HTTP/SSE adapter;
-- Python and TypeScript SDKs;
-- OpenTelemetry integration;
-- production-grade retry and auth middleware.
+- JetStream persistence, ack, replay, and native DLQ;
+- TypeScript SDK;
+- auth middleware;
+- metrics and dashboards.
 
-For the original goals and design rationale, see [`prompts/require.md`](prompts/require.md), [`prompts/design.md`](prompts/design.md), and the current code report in [`prompts/codex_0.1_report.md`](prompts/codex_0.1_report.md).
+For the original goals and design rationale, see [`prompts/require.md`](prompts/require.md), [`prompts/design.md`](prompts/design.md), and the code report in [`prompts/codex_0.1_report.md`](prompts/codex_0.1_report.md).
 
 ## Project Layout
 
@@ -58,12 +60,17 @@ pkg/
 │   ├── inmem/     # In-memory broker for tests and examples
 │   └── nats/      # NATS Core driver
 ├── bus/           # Public Bus API and runtime implementation
-├── middleware/    # Recover, Trace, Logging
-└── session/       # Context helpers for trace/session metadata
+├── middleware/    # Recover, Trace, Logging, Retry, DeadLetter
+│   └── otel/      # OpenTelemetry bridge (opt-in dependency)
+├── session/       # Context helpers for trace/session metadata
+└── adapter/http/  # HTTP/SSE gateway
 
+sdk/python/        # Python asyncio SDK
 schema/            # JSON Schema and cross-language envelope samples
 examples/
-└── echo-agent/    # Minimal invoke round-trip example
+├── echo-agent/    # Minimal invoke round-trip example
+├── http-gateway/  # HTTP/SSE adapter example
+└── streaming-llm/ # StreamInvoke / HandleStream example
 prompts/           # Requirements, design notes, and code reports
 ```
 
@@ -115,10 +122,55 @@ func main() {
 }
 ```
 
-Run the bundled example:
+Run the bundled examples:
 
 ```sh
-go run ./examples/echo-agent
+go run ./examples/echo-agent      # simple request/reply
+go run ./examples/streaming-llm   # stream invoke with delta frames
+go run ./examples/http-gateway    # HTTP/SSE adapter on :8080
+```
+
+### Streaming Quick Start
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "time"
+
+    "github.com/ModulationAI/agentflowbus/pkg/bus"
+    "github.com/ModulationAI/agentflowbus/pkg/event"
+    "github.com/ModulationAI/agentflowbus/pkg/transport/inmem"
+)
+
+func main() {
+    b, _ := bus.New(
+        bus.WithAgentID("stream-agent"),
+        bus.WithTransport(inmem.New()),
+    )
+    defer b.Close()
+
+    _ = b.HandleStream("chat", func(ctx context.Context, e *event.Envelope, w bus.StreamWriter) error {
+        _ = w.Started(nil)
+        _ = w.Delta(map[string]string{"token": "hello "})
+        _ = w.Delta(map[string]string{"token": "world"})
+        return w.Final(map[string]string{"done": "true"})
+    })
+
+    stream, _ := b.StreamInvoke(context.Background(), "chat", nil,
+        bus.WithTimeout(30*time.Second),
+    )
+    defer stream.Close()
+
+    for env, err := range stream.Events() {
+        if err != nil {
+            panic(err)
+        }
+        fmt.Println(env.EventType, string(env.Payload))
+    }
+}
 ```
 
 ## Core Concepts
@@ -152,6 +204,31 @@ agent.response.final
 ```
 
 Each frame receives a monotonically increasing `seq`. The client stream reorders frames by `seq` and stops when `is_final=true`.
+
+### Middleware
+
+Middleware wraps handler invocations with cross-cutting concerns. The recommended order is outer-most first:
+
+```go
+b, _ := bus.New(
+    bus.WithAgentID("agent"),
+    bus.WithTransport(inmem.New()),
+    bus.WithMiddleware(
+        middleware.Recover(),
+        middleware.Trace(),
+        middleware.Logging(logger),
+        middleware.Retry(middleware.RetryPolicy{MaxAttempts: 3}),
+    ),
+)
+```
+
+- **Recover** — catches panics, converts them to errors, and logs stack traces.
+- **Trace** — injects envelope trace/session metadata into `context`.
+- **Logging** — emits a structured log line per invocation with duration.
+- **Retry** — retries failed invocations with configurable backoff.
+- **DeadLetter** — forwards exhausted failures to a DLQ sink.
+
+For OpenTelemetry integration, import `pkg/middleware/otel` and register `otel.Trace()` middleware plus `otel.EnvelopePreparer()` as a `bus.WithEnvelopePreparer` option.
 
 ## Development Commands
 
@@ -189,11 +266,36 @@ b, err := bus.New(
 
 NATS Core support is available today. Durable delivery and replay are planned for a future JetStream transport.
 
+## Python SDK
+
+A Python asyncio SDK lives in `sdk/python/`:
+
+```python
+import asyncio
+from agentflowbus import Bus, InMemoryDriver
+
+async def main():
+    bus = Bus(agent_id="echo", transport=InMemoryDriver())
+    await bus.connect()
+
+    async def echo(env):
+        return env.payload_json()
+
+    await bus.handle_invoke("echo", echo)
+    resp = await bus.invoke("echo", {"msg": "hello"})
+    print(resp.event_type, resp.payload_json())
+    await bus.close()
+
+asyncio.run(main())
+```
+
+Install it with `pip install -e sdk/python/` (the package name is `agentflowbus`).
+
 ## Roadmap
 
 - v0.1: Go runtime, envelope schema, in-memory transport, NATS Core transport, invoke and streaming APIs.
-- v0.2: HTTP/SSE adapter, stronger error mapping, Python agent SDK, trace improvements.
-- v0.3: JetStream reliability, retry hooks, metrics, OpenTelemetry integration.
+- v0.2: HTTP/SSE adapter, Python SDK, session/trace propagation, OpenTelemetry bridge, retry / dead-letter middleware.
+- v0.3: JetStream persistence and replay, auth middleware, metrics, TypeScript SDK.
 - v1.0: stable cross-language protocol and production deployment guidance.
 
 ## License
