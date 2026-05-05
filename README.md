@@ -1,7 +1,7 @@
 <div align="center">
 <p align="center">
-<img src="https://cdn.jsdelivr.net/gh/ModulationAI/agentflowbus/assets/logo.png?raw=true" width="600" height="200" alt="agentflowbus preview">
-</p>
+<img src="https://cdn.jsdelivr.net/gh/ModulationAI/agentflowbus/assets/logo.png?raw=true" width="700" height="350" alt="agentflowbus preview">
+
 </div>
 
 
