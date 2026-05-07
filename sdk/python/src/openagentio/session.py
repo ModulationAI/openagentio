@@ -18,10 +18,10 @@ from __future__ import annotations
 import contextvars
 from typing import Optional
 
-from agentflowbus.event.envelope import Envelope
+from openagentio.event.envelope import Envelope
 
 _envelope: contextvars.ContextVar[Optional[Envelope]] = contextvars.ContextVar(
-    "agentflowbus.envelope",
+    "openagentio.envelope",
     default=None,
 )
 

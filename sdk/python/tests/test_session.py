@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import asyncio
 
-from agentflowbus import Bus, Envelope, ResponseFinal, session
+from openagentio import Bus, Envelope, ResponseFinal, session
 
 
 def test_inject_returns_envelope_via_current() -> None:

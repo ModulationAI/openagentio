@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 
 import pytest_asyncio
 
-from agentflowbus import Bus, InMemoryDriver
+from openagentio import Bus, InMemoryDriver
 
 
 @pytest_asyncio.fixture

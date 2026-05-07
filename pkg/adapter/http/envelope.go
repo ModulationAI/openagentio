@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 const maxBodyBytes = 4 << 20 // 4 MiB cap to keep gateway memory bounded

@@ -1,6 +1,6 @@
-# AgentFlowBus 跨语言契约
+# OpenAgentIO 跨语言契约
 
-`schema/` 目录是 AgentFlowBus 在 Go / Python / 其他 SDK 之间共享的**唯一权威**协议描述。任何修改都视为协议变更,需要同步更新 `schema_version` 并通过所有 SDK 的回归测试。
+`schema/` 目录是 OpenAgentIO 在 Go / Python / 其他 SDK 之间共享的**唯一权威**协议描述。任何修改都视为协议变更,需要同步更新 `schema_version` 并通过所有 SDK 的回归测试。
 
 ## 文件清单
 

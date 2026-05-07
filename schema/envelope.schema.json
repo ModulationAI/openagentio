@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentflowbus.dev/schema/envelope.schema.json",
-  "title": "AgentFlowBus Envelope",
-  "description": "Wire-level container for every message routed by the AgentFlowBus runtime. Mirrors prompts/design.md §3.1.",
+  "$id": "https://openagentio.dev/schema/envelope.schema.json",
+  "title": "OpenAgentIO Envelope",
+  "description": "Wire-level container for every message routed by the OpenAgentIO runtime. Mirrors prompts/design.md §3.1.",
   "type": "object",
   "required": [
     "spec_version",

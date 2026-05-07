@@ -12,23 +12,23 @@ import asyncio
 import logging
 from typing import Any, Awaitable, Callable
 
-from agentflowbus.bus.stream import Stream, StreamWriter, new_reply_shell
-from agentflowbus.bus.subjects import (
+from openagentio.bus.stream import Stream, StreamWriter, new_reply_shell
+from openagentio.bus.subjects import (
     DEFAULT_SUBJECT_PREFIX,
     event_subject,
     invoke_subject,
 )
-from agentflowbus.codec.json_codec import Codec, JSONCodec
-from agentflowbus.event.envelope import Envelope
-from agentflowbus.event.payload import CodeAgentUnavailable, ErrorPayload
-from agentflowbus.event.types import (
+from openagentio.codec.json_codec import Codec, JSONCodec
+from openagentio.event.envelope import Envelope
+from openagentio.event.payload import CodeAgentUnavailable, ErrorPayload
+from openagentio.event.types import (
     MessageReceived,
     ResponseError,
     ResponseFinal,
     is_terminal,
 )
-from agentflowbus.session import inject as _session_inject, reset as _session_reset
-from agentflowbus.transport.base import (
+from openagentio.session import inject as _session_inject, reset as _session_reset
+from openagentio.transport.base import (
     RawMessage,
     Subscription as TransportSubscription,
     Transport,
@@ -63,7 +63,7 @@ class Bus:
         self._prefix = subject_prefix
         self._codec = codec or JSONCodec()
         self._transport = transport
-        self._logger = logger or logging.getLogger("agentflowbus")
+        self._logger = logger or logging.getLogger("openagentio")
         self._default_timeout = default_timeout
 
         self._owned: list[TransportSubscription] = []

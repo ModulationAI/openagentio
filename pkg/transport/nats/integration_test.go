@@ -11,10 +11,10 @@ import (
 
 	natsserver "github.com/nats-io/nats-server/v2/test"
 
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/transport"
-	natsdrv "github.com/ModulationAI/agentflowbus/pkg/transport/nats"
+	"github.com/ModulationAI/openagentio/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/transport"
+	natsdrv "github.com/ModulationAI/openagentio/pkg/transport/nats"
 )
 
 // runEmbeddedNATS spins up an in-process nats-server on a random port. The

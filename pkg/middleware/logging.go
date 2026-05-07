@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // Logging emits a structured log line per handler invocation. nil logger

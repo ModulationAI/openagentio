@@ -1,9 +1,9 @@
-"""AgentFlowBus Python SDK — ACP-compatible Envelope protocol on asyncio.
+"""OpenAgentIO Python SDK — ACP-compatible Envelope protocol on asyncio.
 
 Quickstart::
 
     import asyncio
-    from agentflowbus import Bus, InMemoryDriver
+    from openagentio import Bus, InMemoryDriver
 
     async def main():
         bus = Bus(agent_id="echo", transport=InMemoryDriver())
@@ -19,7 +19,7 @@ Quickstart::
 
     asyncio.run(main())
 """
-from agentflowbus.bus import (
+from openagentio.bus import (
     DEFAULT_SUBJECT_PREFIX,
     Bus,
     ErrIdleTimeout,
@@ -29,8 +29,8 @@ from agentflowbus.bus import (
     StreamHandler,
     StreamWriter,
 )
-from agentflowbus.codec import Codec, JSONCodec
-from agentflowbus.event import (
+from openagentio.codec import Codec, JSONCodec
+from openagentio.event import (
     SCHEMA_VERSION,
     SPEC_VERSION,
     CodeAgentTimeout,
@@ -58,7 +58,7 @@ from agentflowbus.event import (
     is_terminal,
     new_id,
 )
-from agentflowbus.transport import (
+from openagentio.transport import (
     Capabilities,
     Inbox,
     InMemoryDriver,
@@ -68,7 +68,7 @@ from agentflowbus.transport import (
     Transport,
     TransportHandler,
 )
-from agentflowbus import session
+from openagentio import session
 
 __version__ = "0.2.0a0"
 
@@ -122,6 +122,6 @@ __all__ = [
     "TransportHandler",
     "InMemoryDriver",
     "NATSDriver",
-    # Session / trace context (see agentflowbus.session for full API).
+    # Session / trace context (see openagentio.session for full API).
     "session",
 ]

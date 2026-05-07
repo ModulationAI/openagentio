@@ -14,7 +14,7 @@ import os
 
 import pytest
 
-from agentflowbus import (
+from openagentio import (
     Bus,
     CodeAgentUnavailable,
     Envelope,

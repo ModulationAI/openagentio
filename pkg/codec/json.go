@@ -3,7 +3,7 @@ package codec
 import (
 	"encoding/json"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 type jsonCodec struct{}

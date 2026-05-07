@@ -5,7 +5,7 @@ import asyncio
 
 import pytest
 
-from agentflowbus import (
+from openagentio import (
     Bus,
     Envelope,
     ErrIdleTimeout,

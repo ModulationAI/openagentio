@@ -1,4 +1,4 @@
-// Package nats is the NATS Core driver for AgentFlowBus.
+// Package nats is the NATS Core driver for OpenAgentIO.
 //
 // It maps the transport contract onto github.com/nats-io/nats.go: Publish,
 // Subscribe (with optional queue groups), Request/Reply, and ephemeral
@@ -12,7 +12,7 @@ import (
 
 	natsgo "github.com/nats-io/nats.go"
 
-	"github.com/ModulationAI/agentflowbus/pkg/transport"
+	"github.com/ModulationAI/openagentio/pkg/transport"
 )
 
 // Options configure the NATS driver.

@@ -1,16 +1,16 @@
 <div align="center">
 <p align="center">
-<img src="https://cdn.jsdelivr.net/gh/ModulationAI/agentflowbus/assets/logo.png?v=2&raw=true" width="700" height="350" alt="agentflowbus preview">
+<img src="https://cdn.jsdelivr.net/gh/ModulationAI/openagentio/assets/logo.png?v=3&raw=true" width="700" height="350" alt="openagentio preview">
 
 <h3 align="center">
-AgentFlowBus
+OpenAgentIO
 </h3>
 <h5 align="center">
 A protocol & runtime for agent-to-agent communication
 </h5>
 </div>
 
-AgentFlowBus is a lightweight communication runtime for AI agents. It provides an ACP-compatible event envelope, streaming-first request/reply APIs, session and trace propagation, and pluggable transports such as in-memory and NATS Core.
+OpenAgentIO is a lightweight communication runtime for AI agents. It provides an ACP-compatible event envelope, streaming-first request/reply APIs, session and trace propagation, and pluggable transports such as in-memory and NATS Core.
 
 The project focuses on agent communication infrastructure. It does not implement planning, RAG, prompt management, tool execution, or agent orchestration.
 
@@ -24,7 +24,7 @@ AI agent systems often need more than plain HTTP calls:
 - request/reply and pub/sub in the same protocol;
 - a transport-neutral contract that can be shared across Go, Python, and TypeScript SDKs.
 
-AgentFlowBus addresses that layer with a small Go runtime and a protocol-first design.
+OpenAgentIO addresses that layer with a small Go runtime and a protocol-first design.
 
 ## Status
 
@@ -43,15 +43,6 @@ Implemented:
 - **OpenTelemetry** bridge (`pkg/middleware/otel`) — opt-in, no hard dependency;
 - **HTTP/SSE adapter** (`pkg/adapter/http`) for driving the bus over REST;
 - **Python SDK** (`sdk/python/`) with asyncio bus, session context propagation, and stream invoke.
-
-Not yet implemented:
-
-- JetStream persistence, ack, replay, and native DLQ;
-- TypeScript SDK;
-- auth middleware;
-- metrics and dashboards.
-
-For the original goals and design rationale, see [`prompts/require.md`](prompts/require.md), [`prompts/design.md`](prompts/design.md), and the code report in [`prompts/codex_0.1_report.md`](prompts/codex_0.1_report.md).
 
 ## Project Layout
 
@@ -80,7 +71,7 @@ prompts/           # Requirements, design notes, and code reports
 ## Install
 
 ```sh
-go get github.com/ModulationAI/agentflowbus
+go get github.com/ModulationAI/openagentio
 ```
 
 The module pins `go 1.25` and `toolchain go1.25.0` in `go.mod`.
@@ -94,9 +85,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/transport/inmem"
+	"github.com/ModulationAI/openagentio/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/transport/inmem"
 )
 
 func main() {
@@ -143,9 +134,9 @@ import (
     "fmt"
     "time"
 
-    "github.com/ModulationAI/agentflowbus/pkg/bus"
-    "github.com/ModulationAI/agentflowbus/pkg/event"
-    "github.com/ModulationAI/agentflowbus/pkg/transport/inmem"
+    "github.com/ModulationAI/openagentio/pkg/bus"
+    "github.com/ModulationAI/openagentio/pkg/event"
+    "github.com/ModulationAI/openagentio/pkg/transport/inmem"
 )
 
 func main() {
@@ -184,7 +175,7 @@ Every message is carried in an `event.Envelope`. The envelope stores protocol ve
 
 ### Subject Routing
 
-AgentFlowBus separates event semantics from transport routing.
+OpenAgentIO separates event semantics from transport routing.
 
 ```text
 acp.v1.events.{event_type}
@@ -254,11 +245,11 @@ go test ./pkg/event
 Use the NATS transport when running across processes:
 
 ```go
-import nats "github.com/ModulationAI/agentflowbus/pkg/transport/nats"
+import nats "github.com/ModulationAI/openagentio/pkg/transport/nats"
 
 tr := nats.New(
 	nats.URL("nats://localhost:4222"),
-	nats.Name("agentflowbus-main"),
+	nats.Name("openagentio-main"),
 )
 
 b, err := bus.New(
@@ -275,7 +266,7 @@ A Python asyncio SDK lives in `sdk/python/`:
 
 ```python
 import asyncio
-from agentflowbus import Bus, InMemoryDriver
+from openagentio import Bus, InMemoryDriver
 
 async def main():
     bus = Bus(agent_id="echo", transport=InMemoryDriver())
@@ -292,7 +283,7 @@ async def main():
 asyncio.run(main())
 ```
 
-Install it with `pip install -e sdk/python/` (the package name is `agentflowbus`).
+Install it with `pip install -e sdk/python/` (the package name is `openagentio`).
 
 ## Roadmap
 

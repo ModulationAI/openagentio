@@ -1,4 +1,4 @@
-module github.com/ModulationAI/agentflowbus
+module github.com/ModulationAI/openagentio
 
 go 1.25.0
 

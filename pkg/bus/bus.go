@@ -1,4 +1,4 @@
-// Package bus exposes the application-facing API of AgentFlowBus: Publish,
+// Package bus exposes the application-facing API of OpenAgentIO: Publish,
 // Subscribe, Invoke, StreamInvoke, and the corresponding handler registrations
 // for service implementations.
 //
@@ -10,7 +10,7 @@ import (
 	"context"
 	"iter"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // Handler consumes a delivered envelope. Returning an error is allowed but the

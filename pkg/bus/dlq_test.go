@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ModulationAI/agentflowbus/pkg/codec"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/transport"
-	"github.com/ModulationAI/agentflowbus/pkg/transport/inmem"
+	"github.com/ModulationAI/openagentio/pkg/codec"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/transport"
+	"github.com/ModulationAI/openagentio/pkg/transport/inmem"
 )
 
 func TestDLQSinkPublishesToCorrectSubject(t *testing.T) {

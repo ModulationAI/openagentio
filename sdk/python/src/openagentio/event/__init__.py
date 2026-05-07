@@ -1,8 +1,8 @@
 """ACP envelope and event-type definitions. Wire-equivalent to Go's pkg/event."""
 
-from agentflowbus.event.envelope import Envelope
-from agentflowbus.event.ids import new_id
-from agentflowbus.event.payload import (
+from openagentio.event.envelope import Envelope
+from openagentio.event.ids import new_id
+from openagentio.event.payload import (
     CodeAgentTimeout,
     CodeAgentUnavailable,
     CodeAuthFailure,
@@ -16,7 +16,7 @@ from agentflowbus.event.payload import (
     FinalPayload,
     StartedPayload,
 )
-from agentflowbus.event.types import (
+from openagentio.event.types import (
     MessageReceived,
     ResponseDelta,
     ResponseError,

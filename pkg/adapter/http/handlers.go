@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // authenticate runs the configured AuthFunc and returns the derived context.

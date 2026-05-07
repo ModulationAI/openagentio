@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/middleware"
-	"github.com/ModulationAI/agentflowbus/pkg/transport"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/middleware"
+	"github.com/ModulationAI/openagentio/pkg/transport"
 )
 
 func (b *defaultBus) Invoke(ctx context.Context, target string, payload any, opts ...InvokeOption) (*event.Envelope, error) {

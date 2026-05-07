@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	httpadapter "github.com/ModulationAI/agentflowbus/pkg/adapter/http"
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/transport/inmem"
+	httpadapter "github.com/ModulationAI/openagentio/pkg/adapter/http"
+	"github.com/ModulationAI/openagentio/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/transport/inmem"
 )
 
 // newAdapterServer wires a Bus(inmem) + Adapter into an httptest.Server and

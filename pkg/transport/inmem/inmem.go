@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ModulationAI/agentflowbus/pkg/transport"
+	"github.com/ModulationAI/openagentio/pkg/transport"
 )
 
 // Driver is an in-memory pub/sub broker.

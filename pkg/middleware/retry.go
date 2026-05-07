@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // RetryPolicy configures how many times a handler may be retried and with

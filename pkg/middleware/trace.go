@@ -3,8 +3,8 @@ package middleware
 import (
 	"context"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/session"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/session"
 )
 
 // Trace injects the envelope into ctx so downstream handlers (and any nested

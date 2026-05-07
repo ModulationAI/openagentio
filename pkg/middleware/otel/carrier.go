@@ -3,7 +3,7 @@ package otel
 import (
 	"strings"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // envelopeCarrier adapts an event.Envelope to OpenTelemetry's

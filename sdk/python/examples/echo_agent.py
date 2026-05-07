@@ -1,4 +1,4 @@
-"""Minimal AgentFlowBus example for Python: registers an echo invoke handler
+"""Minimal OpenAgentIO example for Python: registers an echo invoke handler
 on an in-memory transport and round-trips a single Invoke call against itself.
 
 Mirrors examples/echo-agent/main.go from the Go SDK.
@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 
-from agentflowbus import Bus, Envelope, InMemoryDriver
+from openagentio import Bus, Envelope, InMemoryDriver
 
 
 async def main() -> None:

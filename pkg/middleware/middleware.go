@@ -6,7 +6,7 @@ package middleware
 import (
 	"context"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // Handler is the inner handler type middleware operates on. It mirrors

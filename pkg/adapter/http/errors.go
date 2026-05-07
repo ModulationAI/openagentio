@@ -6,8 +6,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // statusForCode maps an event.ErrorPayload code to the closest HTTP status.

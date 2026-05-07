@@ -1,5 +1,5 @@
 """Wire-level transport drivers."""
-from agentflowbus.transport.base import (
+from openagentio.transport.base import (
     Capabilities,
     Inbox,
     RawMessage,
@@ -7,8 +7,8 @@ from agentflowbus.transport.base import (
     Transport,
     TransportHandler,
 )
-from agentflowbus.transport.inmem import InMemoryDriver
-from agentflowbus.transport.nats import NATSDriver
+from openagentio.transport.inmem import InMemoryDriver
+from openagentio.transport.nats import NATSDriver
 
 __all__ = [
     "RawMessage",

@@ -1,4 +1,4 @@
-"""NATS Core driver for AgentFlowBus. Mirrors pkg/transport/nats/nats.go.
+"""NATS Core driver for OpenAgentIO. Mirrors pkg/transport/nats/nats.go.
 
 Wraps the async ``nats-py`` client. Exposes Publish, Subscribe (with optional
 queue groups), Request/Reply, and an _INBOX-backed :py:class:`Inbox` for
@@ -13,7 +13,7 @@ import nats
 from nats.aio.client import Client as NATSClient
 from nats.aio.msg import Msg
 
-from agentflowbus.transport.base import (
+from openagentio.transport.base import (
     Capabilities,
     Inbox,
     RawMessage,

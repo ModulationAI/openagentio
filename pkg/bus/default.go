@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ModulationAI/agentflowbus/pkg/codec"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/transport"
+	"github.com/ModulationAI/openagentio/pkg/codec"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/transport"
 )
 
 // ErrNotImplemented is returned by methods whose bodies are reserved for the

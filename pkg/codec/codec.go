@@ -5,7 +5,7 @@ package codec
 import (
 	"encoding/json"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // Codec marshals/unmarshals envelopes and payloads. Implementations must be

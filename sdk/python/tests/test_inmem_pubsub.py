@@ -5,7 +5,7 @@ import asyncio
 
 import pytest
 
-from agentflowbus import Bus, Envelope, InMemoryDriver, MessageReceived
+from openagentio import Bus, Envelope, InMemoryDriver, MessageReceived
 
 
 async def test_publish_subscribe_round_trip(bus: Bus) -> None:

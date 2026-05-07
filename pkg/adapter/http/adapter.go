@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/bus"
 )
 
 // Default per-request timeouts. Override via WithTimeout / WithIdleTimeout.

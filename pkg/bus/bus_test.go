@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/transport/inmem"
+	"github.com/ModulationAI/openagentio/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/transport/inmem"
 )
 
 // newTestBus boots a Bus on an in-memory transport. Returned cleanup must be

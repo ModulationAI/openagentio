@@ -1,4 +1,4 @@
-// Package otel bridges AgentFlowBus middleware to OpenTelemetry. Trace()
+// Package otel bridges OpenAgentIO middleware to OpenTelemetry. Trace()
 // rebuilds an upstream SpanContext from envelope.traceparent and starts a
 // child span around handler execution; EnvelopePreparer() injects the active
 // span back into outbound envelopes so cross-process traces stay linked.
@@ -15,8 +15,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/middleware"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/middleware"
 )
 
 // Trace returns a middleware that, on every handler invocation:

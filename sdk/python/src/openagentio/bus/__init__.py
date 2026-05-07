@@ -1,12 +1,12 @@
 """Application-facing bus runtime."""
-from agentflowbus.bus.bus import (
+from openagentio.bus.bus import (
     Bus,
     Handler,
     InvokeHandler,
     StreamHandler,
 )
-from agentflowbus.bus.stream import ErrIdleTimeout, Stream, StreamWriter
-from agentflowbus.bus.subjects import (
+from openagentio.bus.stream import ErrIdleTimeout, Stream, StreamWriter
+from openagentio.bus.subjects import (
     DEFAULT_SUBJECT_PREFIX,
     event_subject,
     invoke_subject,

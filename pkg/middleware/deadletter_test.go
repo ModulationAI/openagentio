@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 func TestDeadLetterCallsSinkOnError(t *testing.T) {

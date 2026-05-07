@@ -10,16 +10,16 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from agentflowbus.codec.json_codec import Codec
-from agentflowbus.event.envelope import Envelope
-from agentflowbus.event.payload import CodeAgentUnavailable, ErrorPayload
-from agentflowbus.event.types import (
+from openagentio.codec.json_codec import Codec
+from openagentio.event.envelope import Envelope
+from openagentio.event.payload import CodeAgentUnavailable, ErrorPayload
+from openagentio.event.types import (
     ResponseDelta,
     ResponseError,
     ResponseFinal,
     ResponseStarted,
 )
-from agentflowbus.transport.base import Inbox, RawMessage, Transport
+from openagentio.transport.base import Inbox, RawMessage, Transport
 
 
 class ErrIdleTimeout(Exception):

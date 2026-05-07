@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ModulationAI/agentflowbus/pkg/codec"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/middleware"
-	"github.com/ModulationAI/agentflowbus/pkg/transport"
+	"github.com/ModulationAI/openagentio/pkg/codec"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/middleware"
+	"github.com/ModulationAI/openagentio/pkg/transport"
 )
 
 // StreamInvoke publishes a request to {prefix}.invoke.{target} with a fresh

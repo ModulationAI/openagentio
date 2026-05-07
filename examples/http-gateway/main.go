@@ -1,4 +1,4 @@
-// http-gateway boots an AgentFlowBus + HTTP/SSE adapter on :8080 so external
+// http-gateway boots an OpenAgentIO + HTTP/SSE adapter on :8080 so external
 // clients can drive the bus over REST and SSE. Two handlers are registered
 // against the in-memory transport so the demo is self-contained:
 //
@@ -27,11 +27,11 @@ import (
 	"syscall"
 	"time"
 
-	httpadapter "github.com/ModulationAI/agentflowbus/pkg/adapter/http"
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/middleware"
-	"github.com/ModulationAI/agentflowbus/pkg/transport/inmem"
+	httpadapter "github.com/ModulationAI/openagentio/pkg/adapter/http"
+	"github.com/ModulationAI/openagentio/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/middleware"
+	"github.com/ModulationAI/openagentio/pkg/transport/inmem"
 )
 
 func main() {

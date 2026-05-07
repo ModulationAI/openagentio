@@ -1,4 +1,4 @@
-# agentflowbus (Python SDK)
+# openagentio (Python SDK)
 
 ACP-compatible **Envelope** protocol on top of NATS / asyncio. The protocol is
 shared with the Go SDK at the repo root; transport layers are implemented
@@ -11,7 +11,7 @@ independently per language.
 ```
 sdk/python/
 ├── pyproject.toml
-├── src/agentflowbus/
+├── src/openagentio/
 │   ├── event/          # Envelope dataclass, event-type constants, payload shapes
 │   ├── codec/          # JSON codec
 │   ├── transport/      # base ABC + InMemoryDriver + NATSDriver
@@ -43,7 +43,7 @@ local broker first, e.g. `nats-server -p 4222`.
 
 ```python
 import asyncio
-from agentflowbus import Bus, InMemoryDriver
+from openagentio import Bus, InMemoryDriver
 
 async def main() -> None:
     bus = Bus(agent_id="echo", transport=InMemoryDriver())

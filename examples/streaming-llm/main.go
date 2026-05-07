@@ -17,11 +17,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
-	"github.com/ModulationAI/agentflowbus/pkg/codec"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/middleware"
-	"github.com/ModulationAI/agentflowbus/pkg/transport/inmem"
+	"github.com/ModulationAI/openagentio/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/codec"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/middleware"
+	"github.com/ModulationAI/openagentio/pkg/transport/inmem"
 )
 
 func main() {

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from agentflowbus import (
+from openagentio import (
     Envelope,
     MessageReceived,
     ResponseDelta,

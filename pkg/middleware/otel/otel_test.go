@@ -14,8 +14,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	otelapitrace "go.opentelemetry.io/otel/trace"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	otelmw "github.com/ModulationAI/agentflowbus/pkg/middleware/otel"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	otelmw "github.com/ModulationAI/openagentio/pkg/middleware/otel"
 )
 
 // newRecorder builds a TracerProvider that captures every finished span in

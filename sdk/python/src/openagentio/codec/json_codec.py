@@ -5,7 +5,7 @@ import json
 from dataclasses import asdict, is_dataclass
 from typing import Any, Protocol, runtime_checkable
 
-from agentflowbus.event.envelope import Envelope
+from openagentio.event.envelope import Envelope
 
 
 @runtime_checkable

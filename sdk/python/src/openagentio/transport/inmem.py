@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 
-from agentflowbus.transport.base import (
+from openagentio.transport.base import (
     Capabilities,
     Inbox,
     RawMessage,

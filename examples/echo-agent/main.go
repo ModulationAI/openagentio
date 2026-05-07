@@ -1,4 +1,4 @@
-// echo-agent is the minimal AgentFlowBus example: it constructs a Bus backed
+// echo-agent is the minimal OpenAgentIO example: it constructs a Bus backed
 // by the in-memory transport, registers an echo invoke handler, and
 // round-trips a single Invoke call against itself to demonstrate the wiring.
 package main
@@ -10,10 +10,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/ModulationAI/agentflowbus/pkg/bus"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
-	"github.com/ModulationAI/agentflowbus/pkg/middleware"
-	"github.com/ModulationAI/agentflowbus/pkg/transport/inmem"
+	"github.com/ModulationAI/openagentio/pkg/bus"
+	"github.com/ModulationAI/openagentio/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/middleware"
+	"github.com/ModulationAI/openagentio/pkg/transport/inmem"
 )
 
 func main() {

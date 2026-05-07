@@ -10,8 +10,8 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 
-	"github.com/ModulationAI/agentflowbus/pkg/codec"
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/codec"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // schemaDir resolves to the repository's schema/ directory regardless of where

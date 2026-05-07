@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ModulationAI/agentflowbus/pkg/event"
+	"github.com/ModulationAI/openagentio/pkg/event"
 )
 
 // DLQSink receives a failed envelope together with the last error. Implementations

@@ -1,7 +1,7 @@
 """Invoke / reply round-trips over the in-memory driver."""
 from __future__ import annotations
 
-from agentflowbus import (
+from openagentio import (
     Bus,
     CodeAgentUnavailable,
     Envelope,

@@ -13,8 +13,8 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any
 
-from agentflowbus.event.ids import new_id
-from agentflowbus.event.types import SCHEMA_VERSION, SPEC_VERSION
+from openagentio.event.ids import new_id
+from openagentio.event.types import SCHEMA_VERSION, SPEC_VERSION
 
 
 @dataclass
