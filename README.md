@@ -1,6 +1,6 @@
 <div align="center">
 <p align="center">
-<img src="https://cdn.jsdelivr.net/gh/ModulationAI/OpenAgentIO/assets/OpenAgentIO.png?raw=true" width="700" height="350" alt="openagentio preview">
+<img src="https://raw.githubusercontent.com/ModulationAI/openagentio/refs/heads/main/assets/OpenAgentIO.png" width="700" height="350" alt="openagentio preview"> https://github.com/ModulationAI/openagentio/blob/main/assets/OpenAgentIO.png?raw=true
 
 <h3 align="center">
 OpenAgentIO
@@ -16,7 +16,7 @@ The project focuses on agent communication infrastructure. It does not implement
 
 ## Why
 
- <img src="https://cdn.jsdelivr.net/gh/ModulationAI/OpenAgentIO/assets/show.png?raw=true" alt="openagentio show">
+ <img src="https://github.com/ModulationAI/openagentio/blob/main/assets/show.png?raw=true" alt="openagentio show">
 
 AI agent systems often need more than plain HTTP calls:
 
