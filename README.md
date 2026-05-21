@@ -1,6 +1,6 @@
 <div align="center">
 <p align="center">
-<img src="https://cdn.jsdelivr.net/gh/ModulationAI/OpenAgentIO/assets/open_agentio_logo.png?raw=true" width="700" height="350" alt="openagentio preview">
+<img src="https://cdn.jsdelivr.net/gh/ModulationAI/OpenAgentIO/assets/OpenAgentIO.png?raw=true" width="700" height="350" alt="openagentio preview">
 
 <h3 align="center">
 OpenAgentIO
@@ -16,6 +16,8 @@ The project focuses on agent communication infrastructure. It does not implement
 
 ## Why
 
+ <img src="https://cdn.jsdelivr.net/gh/ModulationAI/OpenAgentIO/assets/show.png?raw=true" alt="openagentio show">
+
 AI agent systems often need more than plain HTTP calls:
 
 - streaming responses for LLM token output;
@@ -26,23 +28,34 @@ AI agent systems often need more than plain HTTP calls:
 
 OpenAgentIO addresses that layer with a small Go runtime and a protocol-first design.
 
-## Status
+## Problem Solved
 
-This repository is currently at **v0.2**.
+Distributed Agent Communication Complexity
 
-Implemented:
+| Category | OpenAgentIO |
+|---|---|
+| Positioning | Agent Runtime Bus |
+| Focus | Agent-to-Agent Communication |
+| Protocols | invoke / stream / pubsub |
+| Solves | Distributed A2A Runtime Communication |
+| Architecture Layer | East-West Communication |
+| Core Capabilities | Context / Session / Streaming |
+| Envelope Model | Unified Envelope-Based Messaging |
+| Context Propagation | Trace / Session Propagation |
+| Runtime Support | Cross-Runtime Communication |
+| Typical Scenarios | Multi-Agent Runtime |
 
-- `Envelope` protocol model with schema samples;
-- JSON codec;
-- `Publish` / `Subscribe`;
-- `Invoke` / `HandleInvoke`;
-- `StreamInvoke` / `HandleStream`;
-- in-memory transport for tests and local examples;
-- NATS Core transport for publish, subscribe, queue groups, request/reply, and inbox streams;
-- recover, trace, structured logging, **retry**, and **dead-letter** middleware;
-- **OpenTelemetry** bridge (`pkg/middleware/otel`) — opt-in, no hard dependency;
-- **HTTP/SSE adapter** (`pkg/adapter/http`) for driving the bus over REST;
-- **Python SDK** (`sdk/python/`) with asyncio bus, session context propagation, and stream invoke.
+## Communication Scenarios Coverage
+
+| Scenario | Communication Pattern |
+| --- | --- |
+| ⭐️ Request-Reply | Synchronous Invocation |
+| ⭐️ Streaming | Streaming Response |
+| ⭐️ Pub/Sub | Event-Driven Messaging |
+| ⭐️ Parallel Execution | Parallel Invocation |
+| ⭐️ Agent Handoff | Context Transfer |
+| ⭐️ Async Task | Asynchronous Task Processing |
+
 
 ## Project Layout
 
@@ -70,222 +83,16 @@ prompts/           # Requirements, design notes, and code reports
 
 ## Install
 
+1. Go SDK (1.25+)
 ```sh
 go get github.com/ModulationAI/openagentio
 ```
 
-The module pins `go 1.25` and `toolchain go1.25.0` in `go.mod`.
-
-## Quick Start
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-
-	"github.com/ModulationAI/openagentio/pkg/bus"
-	"github.com/ModulationAI/openagentio/pkg/event"
-	"github.com/ModulationAI/openagentio/pkg/transport/inmem"
-)
-
-func main() {
-	b, err := bus.New(
-		bus.WithAgentID("echo-agent"),
-		bus.WithTransport(inmem.New()),
-	)
-	if err != nil {
-		panic(err)
-	}
-	defer b.Close()
-
-	err = b.HandleInvoke("echo", func(_ context.Context, e *event.Envelope) (any, error) {
-		return map[string]any{"echo": string(e.Payload)}, nil
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	resp, err := b.Invoke(context.Background(), "echo", map[string]any{"msg": "hello"})
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(resp.EventType, string(resp.Payload))
-}
-```
-
-Run the bundled examples:
-
+2. Python SDK (3.10+)
 ```sh
-go run ./examples/echo-agent      # simple request/reply
-go run ./examples/streaming-llm   # stream invoke with delta frames
-go run ./examples/http-gateway    # HTTP/SSE adapter on :8080
+pip install openagentio
 ```
 
-### Streaming Quick Start
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "time"
-
-    "github.com/ModulationAI/openagentio/pkg/bus"
-    "github.com/ModulationAI/openagentio/pkg/event"
-    "github.com/ModulationAI/openagentio/pkg/transport/inmem"
-)
-
-func main() {
-    b, _ := bus.New(
-        bus.WithAgentID("stream-agent"),
-        bus.WithTransport(inmem.New()),
-    )
-    defer b.Close()
-
-    _ = b.HandleStream("chat", func(ctx context.Context, e *event.Envelope, w bus.StreamWriter) error {
-        _ = w.Started(nil)
-        _ = w.Delta(map[string]string{"token": "hello "})
-        _ = w.Delta(map[string]string{"token": "world"})
-        return w.Final(map[string]string{"done": "true"})
-    })
-
-    stream, _ := b.StreamInvoke(context.Background(), "chat", nil,
-        bus.WithTimeout(30*time.Second),
-    )
-    defer stream.Close()
-
-    for env, err := range stream.Events() {
-        if err != nil {
-            panic(err)
-        }
-        fmt.Println(env.EventType, string(env.Payload))
-    }
-}
-```
-
-## Core Concepts
-
-### Envelope
-
-Every message is carried in an `event.Envelope`. The envelope stores protocol version, event type, IDs, trace/session metadata, tenant information, reply routing, sequence numbers, and an opaque JSON payload.
-
-**Metadata inheritance** — When the bus builds a response envelope, it automatically copies non-`acp.*` metadata keys from the request. This means business context such as `dingtalk.conversation_token` or `channel.source_message_id` flows back through cascading invocations (gateway → main-agent → sub-agent) without manual copying. Keys prefixed with `acp.*` (e.g. `acp.retry.attempt`, `acp.dlq.last_error`) are runtime internals and are filtered out.
-
-### Subject Routing
-
-OpenAgentIO separates event semantics from transport routing.
-
-```text
-acp.v1.events.{event_type}
-acp.v1.invoke.{target}
-acp.v1.{tenant}.events.{event_type}
-acp.v1.{tenant}.invoke.{target}
-```
-
-`event_type` describes what happened. The subject determines where the message goes.
-
-### Streaming
-
-`StreamInvoke` opens an inbox, sends a request with `reply_to`, and returns a stream of response envelopes. Server handlers use `StreamWriter` to emit:
-
-```text
-agent.response.started
-agent.response.delta
-agent.response.delta
-agent.response.final
-```
-
-Each frame receives a monotonically increasing `seq`. The client stream reorders frames by `seq` and stops when `is_final=true`.
-
-### Middleware
-
-Middleware wraps handler invocations with cross-cutting concerns. The recommended order is outer-most first:
-
-```go
-b, _ := bus.New(
-    bus.WithAgentID("agent"),
-    bus.WithTransport(inmem.New()),
-    bus.WithMiddleware(
-        middleware.Recover(),
-        middleware.Trace(),
-        middleware.Logging(logger),
-        middleware.Retry(middleware.RetryPolicy{MaxAttempts: 3}),
-    ),
-)
-```
-
-- **Recover** — catches panics, converts them to errors, and logs stack traces.
-- **Trace** — injects envelope trace/session metadata into `context`.
-- **Logging** — emits a structured log line per invocation with duration.
-- **Retry** — retries failed invocations with configurable backoff.
-- **DeadLetter** — forwards exhausted failures to a DLQ sink.
-
-For OpenTelemetry integration, import `pkg/middleware/otel` and register `otel.Trace()` middleware plus `otel.EnvelopePreparer()` as a `bus.WithEnvelopePreparer` option.
-
-## Development Commands
-
-```sh
-go mod tidy      # update module dependencies
-go build ./...   # compile all packages and examples
-go test ./...    # run unit and golden tests
-go test ./... -race
-```
-
-Focused tests:
-
-```sh
-go test ./pkg/bus -run TestStreamInvokeHappyPath
-go test ./pkg/event
-```
-
-## NATS Usage
-
-Use the NATS transport when running across processes:
-
-```go
-import nats "github.com/ModulationAI/openagentio/pkg/transport/nats"
-
-tr := nats.New(
-	nats.URL("nats://localhost:4222"),
-	nats.Name("openagentio-main"),
-)
-
-b, err := bus.New(
-	bus.WithAgentID("main-agent"),
-	bus.WithTransport(tr),
-)
-```
-
-NATS Core support is available today. Durable delivery and replay are planned for a future JetStream transport.
-
-## Python SDK
-
-A Python asyncio SDK lives in `sdk/python/`:
-
-```python
-import asyncio
-from openagentio import Bus, InMemoryDriver
-
-async def main():
-    bus = Bus(agent_id="echo", transport=InMemoryDriver())
-    await bus.connect()
-
-    async def echo(env):
-        return env.payload_json()
-
-    await bus.handle_invoke("echo", echo)
-    resp = await bus.invoke("echo", {"msg": "hello"})
-    print(resp.event_type, resp.payload_json())
-    await bus.close()
-
-asyncio.run(main())
-```
-
-Install it with `pip install -e sdk/python/` (the package name is `openagentio`).
 
 ## Roadmap
 
