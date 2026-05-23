@@ -6,27 +6,61 @@
 OpenAgentIO
 </h3>
 <h5 align="center">
-A protocol & runtime for agent-to-agent communication
+Runtime Communication Infrastructure for AI Agents
 </h5>
-</div>
 
-OpenAgentIO is a lightweight communication runtime for AI agents. It provides an ACP-compatible event envelope, streaming-first request/reply APIs, session and trace propagation, and pluggable transports such as in-memory and NATS Core.
+<div align="center">Build distributed, streaming-native, event-driven multi-agent systems. </div></div>
 
-The project focuses on agent communication infrastructure. It does not implement planning, RAG, prompt management, tool execution, or agent orchestration.
+---
 
-## Why
+OpenAgentIO is a lightweight runtime communication layer for AI agents.
+
+It unifies complex Agent-to-Agent (A2A) communication patterns — including invoke, streaming, pub/sub, async tasks, session propagation, and trace propagation — into a single lightweight programming model.
+
+OpenAgentIO is designed for distributed, event-driven, streaming-native multi-agent systems.
+
+The project focuses on runtime communication and interoperability between agents, rather than planning, workflows, RAG, or prompt orchestration.
+
+
+## Why OpenAgentIO?
+
+Modern AI systems are no longer single agents.
+
+They are:
+- distributed
+- event-driven
+- streaming-native
+- cross-runtime
+- multi-agent
+
+Yet most frameworks primarily focus on:
+- prompting
+- workflows
+- tool calling
 
  <img src="https://github.com/ModulationAI/openagentio/blob/main/assets/show.png?raw=true" alt="openagentio show">
 
-AI agent systems often need more than plain HTTP calls:
 
-- streaming responses for LLM token output;
-- multiple agents or workers consuming the same task stream;
-- consistent session, conversation, tenant, and trace metadata;
-- request/reply and pub/sub in the same protocol;
-- a transport-neutral contract that can be shared across Go, Python, and TypeScript SDKs.
+OpenAgentIO focuses on the runtime communication layer for AI agents.
 
-OpenAgentIO addresses that layer with a small Go runtime and a protocol-first design.
+It unifies complex Agent-to-Agent (A2A) communication patterns — including invoke, streaming, pub/sub, async tasks, session propagation, and trace propagation — into a single programming model.
+
+Designed for distributed runtime collaboration, OpenAgentIO enables agents, workers, and runtimes to communicate consistently across different transports, languages, and execution environments.
+
+## OpenAgentIO is NOT another Agent Framework
+
+Agent frameworks and OpenAgentIO solve different layers of the AI runtime stack.
+
+| Agent Frameworks             | OpenAgentIO                 |
+| ---------------------------- | --------------------------- |
+| Workflow orchestration       | Runtime communication       |
+| Prompt orchestration         | Runtime interoperability    |
+| Tool execution               | Distributed messaging       |
+| Single runtime coordination  | Cross-runtime collaboration |
+| Agent logic                  | Agent networking            |
+| Task pipelines               | Streaming communication     |
+| In-process workflows         | Distributed runtime systems |
+
 
 ## Problem Solved
 
@@ -57,29 +91,15 @@ Distributed Agent Communication Complexity
 | ⭐️ Async Task | Asynchronous Task Processing |
 
 
-## Project Layout
+## Scenario Demo
 
-```text
-pkg/
-├── event/         # Envelope, event types, payloads, UUIDv7 IDs
-├── codec/         # Codec interface and JSON implementation
-├── transport/     # Transport abstraction
-│   ├── inmem/     # In-memory broker for tests and examples
-│   └── nats/      # NATS Core driver
-├── bus/           # Public Bus API and runtime implementation
-├── middleware/    # Recover, Trace, Logging, Retry, DeadLetter
-│   └── otel/      # OpenTelemetry bridge (opt-in dependency)
-├── session/       # Context helpers for trace/session metadata
-└── adapter/http/  # HTTP/SSE gateway
+[![OpenAgentIO Scenario-1](./assets/s1.gif)]()
+[![OpenAgentIO Scenario-2](./assets/s2.gif)]()
+[![OpenAgentIO Scenario-3](./assets/s3.gif)]()
+[![OpenAgentIO Scenario-4](./assets/s4.gif)]()
+[![OpenAgentIO Scenario-5](./assets/s5.gif)]()
+[![OpenAgentIO Scenario-6](./assets/s6.gif)]()
 
-sdk/python/        # Python asyncio SDK
-schema/            # JSON Schema and cross-language envelope samples
-examples/
-├── echo-agent/    # Minimal invoke round-trip example
-├── http-gateway/  # HTTP/SSE adapter example
-└── streaming-llm/ # StreamInvoke / HandleStream example
-prompts/           # Requirements, design notes, and code reports
-```
 
 ## Install
 
@@ -95,6 +115,13 @@ pip install openagentio
 
 
 ## Roadmap
+
+> [!WARNING]
+> OpenAgentIO is under active development and currently in the early 0.2 stage.
+>
+> The project is being rapidly refined around runtime communication APIs, protocol design, and cross-runtime interoperability.
+>
+> A more stable and officially usable 0.3 release is expected in early June 2026.
 
 - v0.1: Go runtime, envelope schema, in-memory transport, NATS Core transport, invoke and streaming APIs.
 - v0.2: HTTP/SSE adapter, Python SDK, session/trace propagation, OpenTelemetry bridge, retry / dead-letter middleware.
