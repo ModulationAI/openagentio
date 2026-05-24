@@ -90,6 +90,61 @@ func TestInvokeRoundTrip(t *testing.T) {
 	}
 }
 
+func TestHandleInvokeDefaultsToTargetQueue(t *testing.T) {
+	b, done := newTestBus(t, "invoke-agent")
+	defer done()
+
+	const N = 6
+	hits := make([]int, 2)
+	for i := range hits {
+		idx := i
+		if err := b.HandleInvoke("shared", func(_ context.Context, _ *event.Envelope) (any, error) {
+			hits[idx]++
+			return map[string]int{"handler": idx}, nil
+		}); err != nil {
+			t.Fatalf("HandleInvoke[%d]: %v", i, err)
+		}
+	}
+
+	for i := 0; i < N; i++ {
+		if _, err := b.Invoke(context.Background(), "shared", nil); err != nil {
+			t.Fatalf("Invoke[%d]: %v", i, err)
+		}
+	}
+
+	total := hits[0] + hits[1]
+	if total != N {
+		t.Fatalf("handler total = %d want %d; hits=%v", total, N, hits)
+	}
+	if hits[0] == 0 || hits[1] == 0 {
+		t.Fatalf("target queue did not balance: %v", hits)
+	}
+}
+
+func TestHandleInvokeExplicitEmptyQueueFanout(t *testing.T) {
+	b, done := newTestBus(t, "invoke-agent")
+	defer done()
+
+	hits := make([]int, 2)
+	for i := range hits {
+		idx := i
+		if err := b.HandleInvoke("fanout", func(_ context.Context, _ *event.Envelope) (any, error) {
+			hits[idx]++
+			return map[string]int{"handler": idx}, nil
+		}, bus.WithHandleQueue("")); err != nil {
+			t.Fatalf("HandleInvoke[%d]: %v", i, err)
+		}
+	}
+
+	if _, err := b.Invoke(context.Background(), "fanout", nil); err != nil {
+		t.Fatalf("Invoke: %v", err)
+	}
+
+	if hits[0] != 1 || hits[1] != 1 {
+		t.Fatalf("fanout hits = %v want [1 1]", hits)
+	}
+}
+
 func TestInvokeHandlerErrorMapsToErrorEnvelope(t *testing.T) {
 	b, done := newTestBus(t, "invoke-agent")
 	defer done()

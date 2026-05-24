@@ -64,6 +64,9 @@ func (b *defaultBus) HandleInvoke(target string, h InvokeHandler, opts ...Handle
 		return errors.New("bus: nil invoke handler")
 	}
 	o := collectHandleOpts(opts)
+	if !o.QueueSet {
+		o.Queue = target
+	}
 	subject := b.invokeSubject(target, b.opts.Tenant)
 
 	dispatch := func(ctx context.Context, msg *transport.RawMessage) error {
@@ -88,7 +91,7 @@ func (b *defaultBus) HandleInvoke(target string, h InvokeHandler, opts ...Handle
 // observability/side effects) but skip the publish.
 func (b *defaultBus) handleOne(ctx context.Context, req *event.Envelope, h InvokeHandler) error {
 	var (
-		result any
+		result  any
 		userErr error
 	)
 	chained := middleware.Chain(middleware.Handler(func(ctx context.Context, e *event.Envelope) error {
