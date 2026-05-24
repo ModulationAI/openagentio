@@ -3,6 +3,7 @@ package bus
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 
 	"github.com/ModulationAI/openagentio/pkg/event"
@@ -132,6 +133,17 @@ func (b *defaultBus) handleOne(ctx context.Context, req *event.Envelope, h Invok
 func (b *defaultBus) buildRequestEnvelope(target string, payload any) (*event.Envelope, error) {
 	if e, ok := payload.(*event.Envelope); ok {
 		env := e.Clone()
+		// ADR-010 runtime contract check: warn if a non-request event type is
+		// used in an invoke/streamInvoke payload. EventType in request/reply
+		// scenarios should be MessageReceived; other values usually indicate
+		// mixing pub/sub and request/reply semantics.
+		if env.EventType != "" && env.EventType != event.MessageReceived {
+			b.opts.Logger.Warn("bus: invoke payload envelope carries non-request event type",
+				slog.String("event_type", env.EventType),
+				slog.String("target", target),
+				slog.String("hint", "use event.NewRequest() for invoke/stream, event.NewEvent() for pub/sub"),
+			)
+		}
 		if env.From == "" {
 			env.From = b.opts.AgentID
 		}
@@ -144,7 +156,7 @@ func (b *defaultBus) buildRequestEnvelope(target string, payload any) (*event.En
 		return env, nil
 	}
 
-	env := event.New(event.MessageReceived)
+	env := event.NewRequest()
 	env.From = b.opts.AgentID
 	env.To = target
 	env.TenantID = b.opts.Tenant

@@ -50,6 +50,18 @@ func New(eventType string) *Envelope {
 	}
 }
 
+// NewEvent creates an envelope for pub/sub broadcasting.
+// eventType should be a business routing key, e.g. "goc.incident.created".
+func NewEvent(eventType string) *Envelope {
+	return New(eventType)
+}
+
+// NewRequest creates an envelope for Invoke / StreamInvoke payloads.
+// It always uses MessageReceived as the event type.
+func NewRequest() *Envelope {
+	return New(MessageReceived)
+}
+
 // Clone returns a shallow copy suitable for in-pipeline mutation. Payload bytes
 // are shared by reference; callers that mutate the payload should copy it.
 func (e *Envelope) Clone() *Envelope {
