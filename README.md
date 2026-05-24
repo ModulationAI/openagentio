@@ -6,25 +6,25 @@
 OpenAgentIO
 </h3>
 <h5 align="center">
-Runtime Communication Infrastructure for AI Agents
+Conversation-Aware Runtime Bus for Distributed AI Agents
 </h5>
 
-<div align="center">Build distributed, streaming-native, event-driven multi-agent systems. </div></div>
+<div align="center">Build conversational distributed systems with streaming, events, sessions, and traces. </div></div>
 
 ---
 
-OpenAgentIO is a lightweight runtime communication layer for AI agents.
+OpenAgentIO is a lightweight runtime bus for distributed AI agents.
 
-It unifies complex Agent-to-Agent (A2A) communication patterns — including invoke, streaming, pub/sub, async tasks, session propagation, and trace propagation — into a single lightweight programming model.
+It gives distributed agents one runtime API for invoke, streaming, pub/sub, async tasks, session propagation, and trace propagation, while allowing the underlying protocol model to evolve with open agent communication ideas.
 
-OpenAgentIO is designed for distributed, event-driven, streaming-native multi-agent systems.
+OpenAgentIO is designed for conversational distributed systems: systems where agents, workers, tools, and runtimes exchange long-lived context across requests, streams, and events.
 
-The project focuses on runtime communication and interoperability between agents, rather than planning, workflows, RAG, or prompt orchestration.
+The project focuses on the runtime communication substrate beneath agent systems, rather than planning, workflows, RAG, prompt orchestration, or model-specific agent logic.
 
 
 ## Why OpenAgentIO?
 
-Modern AI systems are no longer single agents.
+Modern AI systems are no longer single agents running inside one process.
 
 They are:
 - distributed
@@ -32,6 +32,7 @@ They are:
 - streaming-native
 - cross-runtime
 - multi-agent
+- conversation-oriented
 
 Yet most frameworks primarily focus on:
 - prompting
@@ -41,9 +42,9 @@ Yet most frameworks primarily focus on:
  <img src="https://github.com/ModulationAI/openagentio/blob/main/assets/show.png?raw=true" alt="openagentio show">
 
 
-OpenAgentIO focuses on the runtime communication layer for AI agents.
+OpenAgentIO focuses on the runtime communication layer for AI agents and agent-adjacent workers.
 
-It unifies complex Agent-to-Agent (A2A) communication patterns — including invoke, streaming, pub/sub, async tasks, session propagation, and trace propagation — into a single programming model.
+It treats conversational context and lifecycle state as part of the runtime contract, not as application-level afterthoughts. Requests, streams, async task updates, and events stay connected through protocol-level context propagation and lifecycle semantics, while the concrete wire shape can evolve as OpenAgentIO absorbs stronger open-protocol ideas.
 
 Designed for distributed runtime collaboration, OpenAgentIO enables agents, workers, and runtimes to communicate consistently across different transports, languages, and execution environments.
 
@@ -62,22 +63,36 @@ Agent frameworks and OpenAgentIO solve different layers of the AI runtime stack.
 | In-process workflows         | Distributed runtime systems |
 
 
+## Why Conversational Distributed Systems?
+
+Message brokers move bytes between services. Agent systems need more than that.
+
+In a conversational distributed system:
+- a conversation may span multiple agents, services, tools, and runtimes
+- a single user turn may produce request/reply calls, streaming deltas, pub/sub events, and async task updates
+- nested agent calls need to preserve conversational, causal, and observability context
+- streaming responses need a clear lifecycle: started, delta, final, or error
+- transports should be replaceable without rewriting agent communication semantics
+
+OpenAgentIO provides this layer as a small runtime bus: one message model, one bus API, and transport adapters underneath.
+
 ## Problem Solved
 
 Distributed Agent Communication Complexity
 
 | Category | OpenAgentIO |
 |---|---|
-| Positioning | Agent Runtime Bus |
-| Focus | Agent-to-Agent Communication |
+| Positioning | Conversation-Aware Agent Runtime Bus |
+| Focus | Distributed Agent Runtime Communication |
 | Protocols | invoke / stream / pubsub |
-| Solves | Distributed A2A Runtime Communication |
+| Solves | Conversational Runtime Coordination |
 | Architecture Layer | East-West Communication |
 | Core Capabilities | Context / Session / Streaming |
-| Envelope Model | Unified Envelope-Based Messaging |
-| Context Propagation | Trace / Session Propagation |
+| Message Model | Unified Runtime Messaging |
+| Context Propagation | Conversation / Session / Trace Propagation |
 | Runtime Support | Cross-Runtime Communication |
 | Typical Scenarios | Multi-Agent Runtime |
+
 
 ## Communication Scenarios Coverage
 
@@ -113,6 +128,29 @@ go get github.com/ModulationAI/openagentio
 pip install openagentio
 ```
 
+## Design Philosophy
+OpenAgentIO focuses on the communication runtime layer for distributed AI agents.
+
+Rather than building another agent framework, OpenAgentIO focuses on:
+- invoke and request-reply semantics
+- streaming agent communication
+- async task signaling
+- pub/sub patterns
+- context propagation
+- runtime interoperability
+- transport-neutral messaging
+
+The goal is to provide a small, explicit, and composable communication substrate for heterogeneous agent systems.
+
+## Relationship to A2A
+
+OpenAgentIO is not an alternative to A2A. A2A is an emerging interoperability protocol for agents;OpenAgentIO focuses on the runtime substrate that carries agent communication patterns inside distributed systems.
+As the A2A ecosystem evolves, OpenAgentIO intends to absorb compatible ideas around:
+   - task lifecycle semantics
+   - streaming event models
+   - interoperability patterns
+
+while keeping the runtime model composable across different transport backends.sport-neutral.
 
 ## Roadmap
 
@@ -124,9 +162,10 @@ pip install openagentio
 > A more stable and officially usable 0.3 release is expected in early June 2026.
 
 - v0.1: Go runtime, envelope schema, in-memory transport, NATS Core transport, invoke and streaming APIs.
-- v0.2: HTTP/SSE adapter, Python SDK, session/trace propagation, OpenTelemetry bridge, retry / dead-letter middleware.
-- v0.3: JetStream persistence and replay, auth middleware, metrics, TypeScript SDK.
-- v1.0: stable cross-language protocol and production deployment guidance.
+- v0.2.x: HTTP/SSE adapter, Python SDK, session/trace propagation, OpenTelemetry bridge, retry / dead-letter middleware.
+- v0.3.x: Reliability, protocol state cleanup, first multi-language SDK.
+- v0.4.x: Advanced orchestration scenes, control plane foundation.
+- v1.0.x: stable runtime message schema, cross-language compatibility, and production deployment guidance.
 
 ## License
 
