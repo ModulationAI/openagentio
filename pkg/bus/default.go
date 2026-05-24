@@ -33,6 +33,9 @@ func New(opts ...Option) (Bus, error) {
 	for _, f := range opts {
 		f(&o)
 	}
+	if o.Logger == nil {
+		o.Logger = slog.Default()
+	}
 	if o.Transport == nil {
 		return nil, errors.New("bus: transport is required")
 	}

@@ -26,13 +26,13 @@ func readEnvelope(r *http.Request, eventType string, ac *AuthContext) (*event.En
 
 	var env *event.Envelope
 	if eventType != "" {
-		env = event.New(eventType)
+		env = event.NewEvent(eventType)
 	} else {
 		// Bus.buildRequestEnvelope will assign MessageReceived when payload is
 		// not an envelope; passing an envelope through forces our headers to
 		// flow. Use an empty event type here and let the Bus stamp one if it
 		// wants — actually we must set one because Envelope requires it.
-		env = event.New(event.MessageReceived)
+		env = event.NewRequest()
 	}
 
 	// Body → Payload. Reject malformed JSON to fail fast (JSON Codec on the
