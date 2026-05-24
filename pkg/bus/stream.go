@@ -84,6 +84,9 @@ func (b *defaultBus) HandleStream(target string, h StreamHandler, opts ...Handle
 		return errors.New("bus: nil stream handler")
 	}
 	o := collectHandleOpts(opts)
+	if !o.QueueSet {
+		o.Queue = target
+	}
 	subject := b.invokeSubject(target, b.opts.Tenant)
 
 	dispatch := func(_ context.Context, msg *transport.RawMessage) error {

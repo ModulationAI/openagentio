@@ -44,11 +44,11 @@ type Options struct {
 // Option mutates Options.
 type Option func(*Options)
 
-func WithAgentID(id string) Option       { return func(o *Options) { o.AgentID = id } }
-func WithTenant(t string) Option         { return func(o *Options) { o.Tenant = t } }
-func WithSubjectPrefix(p string) Option  { return func(o *Options) { o.SubjectPrefix = p } }
-func WithCodec(c codec.Codec) Option     { return func(o *Options) { o.Codec = c } }
-func WithLogger(l *slog.Logger) Option   { return func(o *Options) { o.Logger = l } }
+func WithAgentID(id string) Option      { return func(o *Options) { o.AgentID = id } }
+func WithTenant(t string) Option        { return func(o *Options) { o.Tenant = t } }
+func WithSubjectPrefix(p string) Option { return func(o *Options) { o.SubjectPrefix = p } }
+func WithCodec(c codec.Codec) Option    { return func(o *Options) { o.Codec = c } }
+func WithLogger(l *slog.Logger) Option  { return func(o *Options) { o.Logger = l } }
 
 func WithTransport(t transport.Transport) Option {
 	return func(o *Options) { o.Transport = t }
@@ -103,13 +103,17 @@ func WithIdleTimeout(d time.Duration) InvokeOption {
 type HandleOption func(*handleOpts)
 
 type handleOpts struct {
-	Queue string
+	Queue    string
+	QueueSet bool
 }
 
 // WithHandleQueue places the handler in a queue group so multiple replicas
 // load-balance the work.
 func WithHandleQueue(q string) HandleOption {
-	return func(o *handleOpts) { o.Queue = q }
+	return func(o *handleOpts) {
+		o.Queue = q
+		o.QueueSet = true
+	}
 }
 
 // --- Internal helpers ---------------------------------------------------------

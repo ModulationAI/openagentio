@@ -67,6 +67,89 @@ func TestStreamInvokeHappyPath(t *testing.T) {
 	}
 }
 
+func TestHandleStreamDefaultsToTargetQueue(t *testing.T) {
+	b, done := newTestBus(t, "stream-agent")
+	defer done()
+
+	const N = 6
+	hits := make(chan int, N)
+	for i := 0; i < 2; i++ {
+		idx := i
+		if err := b.HandleStream("shared", func(_ context.Context, _ *event.Envelope, w bus.StreamWriter) error {
+			hits <- idx
+			return w.Final(map[string]int{"handler": idx})
+		}); err != nil {
+			t.Fatalf("HandleStream[%d]: %v", i, err)
+		}
+	}
+
+	for i := 0; i < N; i++ {
+		s, err := b.StreamInvoke(context.Background(), "shared", nil)
+		if err != nil {
+			t.Fatalf("StreamInvoke[%d]: %v", i, err)
+		}
+		for _, err := range s.Events() {
+			if err != nil {
+				t.Fatalf("frame error[%d]: %v", i, err)
+			}
+		}
+		_ = s.Close()
+	}
+
+	counts := make([]int, 2)
+	for i := 0; i < N; i++ {
+		select {
+		case idx := <-hits:
+			counts[idx]++
+		case <-time.After(time.Second):
+			t.Fatalf("timeout waiting for stream handler hit %d", i)
+		}
+	}
+	if counts[0] == 0 || counts[1] == 0 {
+		t.Fatalf("target queue did not balance: %v", counts)
+	}
+}
+
+func TestHandleStreamExplicitEmptyQueueFanout(t *testing.T) {
+	b, done := newTestBus(t, "stream-agent")
+	defer done()
+
+	hits := make(chan int, 2)
+	for i := 0; i < 2; i++ {
+		idx := i
+		if err := b.HandleStream("fanout", func(_ context.Context, _ *event.Envelope, w bus.StreamWriter) error {
+			hits <- idx
+			return w.Final(map[string]int{"handler": idx})
+		}, bus.WithHandleQueue("")); err != nil {
+			t.Fatalf("HandleStream[%d]: %v", i, err)
+		}
+	}
+
+	s, err := b.StreamInvoke(context.Background(), "fanout", nil)
+	if err != nil {
+		t.Fatalf("StreamInvoke: %v", err)
+	}
+	for _, err := range s.Events() {
+		if err != nil {
+			t.Fatalf("frame error: %v", err)
+		}
+	}
+	_ = s.Close()
+
+	counts := make([]int, 2)
+	for i := 0; i < 2; i++ {
+		select {
+		case idx := <-hits:
+			counts[idx]++
+		case <-time.After(time.Second):
+			t.Fatalf("timeout waiting for fanout stream handler hit %d", i)
+		}
+	}
+	if counts[0] != 1 || counts[1] != 1 {
+		t.Fatalf("fanout hits = %v want [1 1]", counts)
+	}
+}
+
 func TestStreamInvokeAutoFinalOnNilReturn(t *testing.T) {
 	b, done := newTestBus(t, "stream-agent")
 	defer done()
