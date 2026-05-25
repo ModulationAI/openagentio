@@ -403,15 +403,15 @@ func TestBusOverNATS_StreamInvokeOrdering(t *testing.T) {
 	b, d := busOverNATS(t, url, "stream-agent")
 
 	if err := b.HandleStream("count", func(_ context.Context, _ *event.Envelope, w bus.StreamWriter) error {
-		if err := w.Started(map[string]any{"model": "test"}); err != nil {
+		if err := w.Started(event.StartedPayload{Meta: map[string]any{"model": "test"}}); err != nil {
 			return err
 		}
 		for i := 0; i < 3; i++ {
-			if err := w.Delta(map[string]any{"i": i}); err != nil {
+			if err := w.Delta(event.DeltaPayload{Data: map[string]any{"i": i}}); err != nil {
 				return err
 			}
 		}
-		return w.Final(map[string]any{"count": 3})
+		return w.Final(event.FinalPayload{Result: map[string]any{"count": 3}})
 	}); err != nil {
 		t.Fatalf("HandleStream: %v", err)
 	}
