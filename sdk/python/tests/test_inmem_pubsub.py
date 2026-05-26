@@ -5,7 +5,7 @@ import asyncio
 
 import pytest
 
-from openagentio import Bus, Envelope, InMemoryDriver, MessageReceived
+from openagentio import Bus, Envelope, InMemoryDriver, MessageReceived, WithQueue
 
 
 async def test_publish_subscribe_round_trip(bus: Bus) -> None:
@@ -74,7 +74,33 @@ async def test_subscribe_handler_error_does_not_kill_bus(bus: Bus) -> None:
         await sub.unsubscribe()
 
 
-async def test_queue_group_balances() -> None:
+async def test_close_unsubscribes_active_subscriptions() -> None:
+    """Bus.close() automatically unsubscribes all subscribe()-tracked subs.
+
+    Mirrors Go's `Bus.Close()` behavior — no manual unsubscribe required.
+    """
+    transport = InMemoryDriver()
+    b = Bus(agent_id="closer", transport=transport)
+    await b.connect()
+
+    received_count = 0
+
+    async def handler(_: Envelope) -> None:
+        nonlocal received_count
+        received_count += 1
+
+    await b.subscribe(MessageReceived, handler)
+
+    # Publish first message — should be received.
+    await b.publish(Envelope.new(MessageReceived))
+    await asyncio.sleep(0.05)
+    assert received_count == 1
+
+    # Close without manual unsubscribe.
+    await b.close()
+
+    # After close, _owned should be empty (auto-cleanup).
+    assert len(b._owned) == 0
     """Two subscribers in the same queue group split deliveries."""
     transport = InMemoryDriver()
     b = Bus(agent_id="qa", transport=transport)
@@ -91,8 +117,8 @@ async def test_queue_group_balances() -> None:
             nonlocal b_hits
             b_hits += 1
 
-        sub_a = await b.subscribe(MessageReceived, a, queue="workers")
-        sub_b = await b.subscribe(MessageReceived, bb, queue="workers")
+        sub_a = await b.subscribe(MessageReceived, a, WithQueue("workers"))
+        sub_b = await b.subscribe(MessageReceived, bb, WithQueue("workers"))
         try:
             for _ in range(12):
                 await b.publish(Envelope.new(MessageReceived))

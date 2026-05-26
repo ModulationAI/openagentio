@@ -12,7 +12,8 @@ from typing import Any
 
 from openagentio.codec.json_codec import Codec
 from openagentio.event.envelope import Envelope
-from openagentio.event.payload import CodeAgentUnavailable, ErrorPayload
+from openagentio.bus.errors import error_code_for, is_retryable_for
+from openagentio.event.payload import ErrorPayload
 from openagentio.event.types import (
     ResponseDelta,
     ResponseError,
@@ -102,7 +103,9 @@ class StreamWriter:
         env = new_reply_shell(self._agent_id, self._req, ResponseError)
         env.seq = seq
         env.is_final = True
-        payload = ErrorPayload(code=CodeAgentUnavailable, message=str(exc))
+        code = error_code_for(exc)
+        retryable = is_retryable_for(exc)
+        payload = ErrorPayload(code=code, message=str(exc), retryable=retryable)
         env.payload = self._codec.encode_payload(payload)
         await self._publish(env)
 

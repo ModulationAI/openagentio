@@ -69,6 +69,27 @@ def conversation_id() -> Optional[str]:
     return e.conversation_id
 
 
+def span_id() -> Optional[str]:
+    e = _envelope.get()
+    if e is None or not e.span_id:
+        return None
+    return e.span_id
+
+
+def user_id() -> Optional[str]:
+    e = _envelope.get()
+    if e is None or not e.user_id:
+        return None
+    return e.user_id
+
+
+def channel() -> Optional[str]:
+    e = _envelope.get()
+    if e is None or not e.channel:
+        return None
+    return e.channel
+
+
 __all__ = [
     "inject",
     "reset",
@@ -77,4 +98,7 @@ __all__ = [
     "session_id",
     "tenant_id",
     "conversation_id",
+    "span_id",
+    "user_id",
+    "channel",
 ]
