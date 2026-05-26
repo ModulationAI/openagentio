@@ -7,6 +7,7 @@ from openagentio.transport.base import (
     Transport,
     TransportHandler,
 )
+from openagentio.transport.dial import DialOption, WithNATSName, dial
 from openagentio.transport.inmem import InMemoryDriver
 from openagentio.transport.nats import NATSDriver
 
@@ -19,4 +20,8 @@ __all__ = [
     "TransportHandler",
     "InMemoryDriver",
     "NATSDriver",
+    # Dial helper.
+    "dial",
+    "DialOption",
+    "WithNATSName",
 ]

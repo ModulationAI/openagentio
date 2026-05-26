@@ -1,12 +1,18 @@
 """Invoke / reply round-trips over the in-memory driver."""
 from __future__ import annotations
 
+import asyncio
+
+import pytest
+
 from openagentio import (
     Bus,
+    CodeAgentTimeout,
     CodeAgentUnavailable,
     Envelope,
     ResponseError,
     ResponseFinal,
+    WithTimeout,
 )
 
 
@@ -66,3 +72,18 @@ async def test_invoke_passes_through_envelope_payload(bus: Bus) -> None:
     assert seen_event_id["id"] == custom_req.event_id
     assert resp.correlation_id == custom_req.event_id
     assert resp.payload_json() == {"got": "user.custom"}
+
+
+async def test_invoke_timeout_error_maps_to_agent_timeout(bus: Bus) -> None:
+    """Handler raising AgentTimeoutError → ResponseError with code=AGENT_TIMEOUT, retryable=True."""
+    from openagentio import AgentTimeoutError, CodeAgentTimeout
+
+    async def handler(_: Envelope) -> None:
+        raise AgentTimeoutError("deadline exceeded")
+
+    await bus.handle_invoke("timeout-err", handler)
+    resp = await bus.invoke("timeout-err", None)
+    assert resp.event_type == ResponseError
+    err = resp.payload_json()
+    assert err["code"] == CodeAgentTimeout
+    assert err["retryable"] is True

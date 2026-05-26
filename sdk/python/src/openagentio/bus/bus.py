@@ -3,8 +3,11 @@
 Async-first: every IO operation is a coroutine. Mirrors pkg/bus.
 
 A Bus instance owns the subscriptions registered via :meth:`Bus.handle_invoke`
-and :meth:`Bus.handle_stream`; closing the bus unsubscribes them and closes the
-underlying transport.
+and :meth:`Bus.handle_stream` **and** :meth:`Bus.subscribe`; closing the bus
+unsubscribes them all and closes the underlying transport.
+
+Middleware chain (registered via ``WithMiddleware``) is applied in
+subscribe/handle_invoke/handle_stream dispatch paths, mirroring the Go SDK.
 """
 from __future__ import annotations
 
@@ -12,6 +15,20 @@ import asyncio
 import logging
 from typing import Any, Awaitable, Callable
 
+from openagentio.bus.errors import BusError, error_code_for, is_retryable_for
+from openagentio.bus.options import (
+    Options,
+    Option,
+    _HandleOpts,
+    _InvokeOpts,
+    _SubOpts,
+    collect_handle_opts,
+    collect_invoke_opts,
+    collect_sub_opts,
+    HandleOption,
+    InvokeOption,
+    SubOption,
+)
 from openagentio.bus.stream import Stream, StreamWriter, new_reply_shell
 from openagentio.bus.subjects import (
     DEFAULT_SUBJECT_PREFIX,
@@ -20,14 +37,14 @@ from openagentio.bus.subjects import (
 )
 from openagentio.codec.json_codec import Codec, JSONCodec
 from openagentio.event.envelope import Envelope
-from openagentio.event.payload import CodeAgentUnavailable, ErrorPayload
+from openagentio.event.payload import ErrorPayload
 from openagentio.event.types import (
     MessageReceived,
     ResponseError,
     ResponseFinal,
     is_terminal,
 )
-from openagentio.session import inject as _session_inject, reset as _session_reset
+from openagentio.middleware import Chain, Handler as MiddlewareHandler, Middleware
 from openagentio.transport.base import (
     RawMessage,
     Subscription as TransportSubscription,
@@ -54,17 +71,46 @@ class Bus:
         logger: logging.Logger | None = None,
         default_timeout: float = 30.0,
     ) -> None:
-        if not agent_id:
+        opts = Options(
+            agent_id=agent_id,
+            transport=transport,
+            tenant=tenant,
+            subject_prefix=subject_prefix,
+            codec=codec,
+            logger=logger,
+            default_timeout=default_timeout,
+        )
+        self._init_from_opts(opts)
+
+    @classmethod
+    def new(cls, *options: Option) -> Bus:
+        """Factory aligned with Go SDK's ``bus.New(WithAgentID(...), WithTransport(...))``."""
+        opts = Options()
+        for o in options:
+            o(opts)
+        bus = cls.__new__(cls)
+        bus._init_from_opts(opts)
+        return bus
+
+    def _init_from_opts(self, opts: Options) -> None:
+        if not opts.agent_id:
             raise ValueError("bus: agent_id is required")
-        if transport is None:
+        if opts.transport is None:
             raise ValueError("bus: transport is required")
-        self._agent_id = agent_id
-        self._tenant = tenant
-        self._prefix = subject_prefix
-        self._codec = codec or JSONCodec()
-        self._transport = transport
-        self._logger = logger or logging.getLogger("openagentio")
-        self._default_timeout = default_timeout
+        self._opts = opts
+        self._agent_id = opts.agent_id
+        self._tenant = opts.tenant
+        self._prefix = opts.subject_prefix
+        self._codec = opts.codec or JSONCodec()
+        self._transport = opts.transport
+        self._logger = opts.logger or logging.getLogger("openagentio")
+        self._default_timeout = opts.default_timeout
+        self._envelope_preparers = opts.envelope_preparers
+
+        # Middleware chain: bus-level middleware only. Users must explicitly
+        # include Trace() via WithMiddleware(Trace()) if they want session
+        # propagation, mirroring the Go SDK where Trace is opt-in.
+        self._middleware: list[Middleware] = list(opts.middleware)
 
         self._owned: list[TransportSubscription] = []
         self._tasks: set[asyncio.Task] = set()
@@ -109,6 +155,7 @@ class Bus:
             raise ValueError("bus: nil envelope")
         if not env.event_type:
             raise ValueError("bus: envelope missing event_type")
+        self._prepare_envelope(env)
         subject = event_subject(self._prefix, env.event_type, self._resolve_tenant(env.tenant_id))
         data = self._codec.encode_envelope(env)
         await self._transport.publish(
@@ -119,14 +166,17 @@ class Bus:
         self,
         event_type: str,
         handler: Handler,
-        *,
-        queue: str = "",
+        *options: SubOption,
     ) -> TransportSubscription:
         if handler is None:
             raise ValueError("bus: nil handler")
         if not event_type:
             raise ValueError("bus: empty event_type")
+        sub_opts = collect_sub_opts(list(options))
         subject = event_subject(self._prefix, event_type, self._tenant)
+
+        # Wrap handler with middleware chain.
+        wrapped = Chain(handler, *self._middleware)
 
         async def dispatch(msg: RawMessage) -> None:
             try:
@@ -134,9 +184,14 @@ class Bus:
             except Exception as e:  # noqa: BLE001
                 self._logger.warning("bus: decode error: %s", e)
                 return
-            await self._safe_call(handler, env)
+            try:
+                await wrapped(env)
+            except Exception as e:  # noqa: BLE001
+                self._logger.warning("bus: handler error after middleware: %s", e)
 
-        return await self._transport.subscribe(subject, queue, dispatch)
+        sub = await self._transport.subscribe(subject, sub_opts.queue, dispatch)
+        self._track_owned(sub)
+        return sub
 
     # --- invoke / reply --------------------------------------------------
 
@@ -144,14 +199,15 @@ class Bus:
         self,
         target: str,
         payload: Any = None,
-        *,
-        timeout: float | None = None,
+        *options: InvokeOption,
     ) -> Envelope:
         if not target:
             raise ValueError("bus: empty invoke target")
 
-        eff_timeout = timeout if timeout is not None else self._default_timeout
+        invoke_opts = collect_invoke_opts(list(options))
+        eff_timeout = invoke_opts.timeout if invoke_opts.timeout is not None else self._default_timeout
         env = self._build_request_envelope(target, payload)
+        self._prepare_envelope(env)
 
         inbox = await self._transport.open_inbox()
         try:
@@ -175,16 +231,17 @@ class Bus:
         self,
         target: str,
         handler: InvokeHandler,
-        *,
-        queue: str = "",
+        *options: HandleOption,
     ) -> None:
         if not target:
             raise ValueError("bus: empty invoke target")
         if handler is None:
             raise ValueError("bus: nil invoke handler")
+        handle_opts = collect_handle_opts(list(options))
+        queue = handle_opts.queue if handle_opts.queue_set else target
         subject = invoke_subject(self._prefix, target, self._tenant)
 
-        async def dispatch(msg: RawMessage) -> None:
+        async def invoke_dispatch(msg: RawMessage) -> None:
             try:
                 req = self._codec.decode_envelope(msg.data)
             except Exception as e:  # noqa: BLE001
@@ -192,19 +249,25 @@ class Bus:
                 return
             await self._handle_one(req, handler)
 
-        sub = await self._transport.subscribe(subject, queue, dispatch)
+        sub = await self._transport.subscribe(subject, queue, invoke_dispatch)
         self._track_owned(sub)
 
     async def _handle_one(self, req: Envelope, handler: InvokeHandler) -> None:
         result: Any = None
+
+        # Adapter calls the InvokeHandler and captures result.
+        # Exceptions propagate through the middleware chain naturally so
+        # middleware like Retry can intercept and retry them.
+        async def invoke_handler_adapter(env: Envelope) -> None:
+            nonlocal result
+            result = await handler(env)
+
+        wrapped = Chain(invoke_handler_adapter, *self._middleware)
         user_err: BaseException | None = None
-        token = _session_inject(req)
         try:
-            result = await handler(req)
+            await wrapped(req)
         except BaseException as e:  # noqa: BLE001
             user_err = e
-        finally:
-            _session_reset(token)
 
         if not req.reply_to:
             if user_err is not None:
@@ -234,14 +297,15 @@ class Bus:
         self,
         target: str,
         payload: Any = None,
-        *,
-        timeout: float | None = None,
-        idle_timeout: float | None = None,
+        *options: InvokeOption,
     ) -> Stream:
         if not target:
             raise ValueError("bus: empty invoke target")
 
-        eff_timeout = timeout if timeout is not None else self._default_timeout
+        invoke_opts = collect_invoke_opts(list(options))
+        eff_timeout = invoke_opts.timeout if invoke_opts.timeout is not None else self._default_timeout
+        idle_timeout = invoke_opts.idle_timeout
+
         deadline: float | None
         if eff_timeout > 0:
             deadline = asyncio.get_running_loop().time() + eff_timeout
@@ -249,6 +313,7 @@ class Bus:
             deadline = None
 
         env = self._build_request_envelope(target, payload)
+        self._prepare_envelope(env)
         inbox = await self._transport.open_inbox()
         env.reply_to = inbox.subject
         try:
@@ -276,16 +341,17 @@ class Bus:
         self,
         target: str,
         handler: StreamHandler,
-        *,
-        queue: str = "",
+        *options: HandleOption,
     ) -> None:
         if not target:
             raise ValueError("bus: empty invoke target")
         if handler is None:
             raise ValueError("bus: nil stream handler")
+        handle_opts = collect_handle_opts(list(options))
+        queue = handle_opts.queue if handle_opts.queue_set else target
         subject = invoke_subject(self._prefix, target, self._tenant)
 
-        async def dispatch(msg: RawMessage) -> None:
+        async def stream_dispatch(msg: RawMessage) -> None:
             try:
                 req = self._codec.decode_envelope(msg.data)
             except Exception as e:  # noqa: BLE001
@@ -298,21 +364,25 @@ class Bus:
             self._tasks.add(task)
             task.add_done_callback(self._tasks.discard)
 
-        sub = await self._transport.subscribe(subject, queue, dispatch)
+        sub = await self._transport.subscribe(subject, queue, stream_dispatch)
         self._track_owned(sub)
 
     async def _run_stream_handler(
         self, req: Envelope, handler: StreamHandler
     ) -> None:
         writer = StreamWriter(self._transport, self._codec, self._agent_id, req)
+
+        # Adapter calls the StreamHandler. Exceptions propagate through
+        # middleware chain so Retry etc. can intercept them.
+        async def stream_handler_adapter(env: Envelope) -> None:
+            await handler(env, writer)
+
+        wrapped = Chain(stream_handler_adapter, *self._middleware)
         herr: BaseException | None = None
-        token = _session_inject(req)
         try:
-            await handler(req, writer)
+            await wrapped(req)
         except BaseException as e:  # noqa: BLE001
             herr = e
-        finally:
-            _session_reset(token)
 
         if writer.closed:
             return
@@ -329,17 +399,13 @@ class Bus:
     def _track_owned(self, sub: TransportSubscription) -> None:
         self._owned.append(sub)
 
-    async def _safe_call(self, handler: Handler, env: Envelope) -> None:
-        token = _session_inject(env)
-        try:
-            await handler(env)
-        except BaseException as e:  # noqa: BLE001
-            self._logger.warning("bus: handler error: %s", e)
-        finally:
-            _session_reset(token)
-
     def _resolve_tenant(self, envelope_tenant: str) -> str:
         return envelope_tenant or self._tenant
+
+    def _prepare_envelope(self, env: Envelope) -> None:
+        """Run all registered EnvelopePreparers on an outbound envelope."""
+        for preparer in self._envelope_preparers:
+            preparer(env)
 
     def _build_request_envelope(self, target: str, payload: Any) -> Envelope:
         if isinstance(payload, Envelope):
@@ -370,7 +436,9 @@ class Bus:
     def _error_response(self, req: Envelope, exc: BaseException) -> Envelope:
         resp = new_reply_shell(self._agent_id, req, ResponseError)
         resp.is_final = True
-        payload = ErrorPayload(code=CodeAgentUnavailable, message=str(exc))
+        code = error_code_for(exc)
+        retryable = is_retryable_for(exc)
+        payload = ErrorPayload(code=code, message=str(exc), retryable=retryable)
         resp.payload = self._codec.encode_payload(payload)
         return resp
 

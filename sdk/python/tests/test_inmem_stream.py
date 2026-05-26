@@ -7,6 +7,8 @@ import pytest
 
 from openagentio import (
     Bus,
+    CodeAgentTimeout,
+    CodeAgentUnavailable,
     Envelope,
     ErrIdleTimeout,
     ResponseDelta,
@@ -14,6 +16,8 @@ from openagentio import (
     ResponseFinal,
     ResponseStarted,
     StreamWriter,
+    WithIdleTimeout,
+    WithTimeout,
 )
 
 
@@ -151,7 +155,7 @@ async def test_stream_idle_timeout(bus: Bus) -> None:
 
     await bus.handle_stream("hang", handler)
 
-    s = await bus.stream_invoke("hang", None, idle_timeout=0.05)
+    s = await bus.stream_invoke("hang", None, WithIdleTimeout(0.05))
     got_start = False
     raised: BaseException | None = None
     try:
@@ -185,7 +189,7 @@ async def test_stream_overall_timeout(bus: Bus) -> None:
 
     await bus.handle_stream("trickle", handler)
 
-    s = await bus.stream_invoke("trickle", None, timeout=0.05, idle_timeout=1.0)
+    s = await bus.stream_invoke("trickle", None, WithTimeout(0.05), WithIdleTimeout(1.0))
     raised: BaseException | None = None
     try:
         async for _ in s:
@@ -213,7 +217,7 @@ async def test_stream_overall_timeout_beats_idle_when_no_frames(bus: Bus) -> Non
 
     # idle_timeout > timeout — overall deadline must fire first and surface
     # asyncio.TimeoutError, not ErrIdleTimeout.
-    s = await bus.stream_invoke("silent", None, timeout=0.05, idle_timeout=1.0)
+    s = await bus.stream_invoke("silent", None, WithTimeout(0.05), WithIdleTimeout(1.0))
     raised: BaseException | None = None
     got_start = False
     try:
@@ -228,6 +232,61 @@ async def test_stream_overall_timeout_beats_idle_when_no_frames(bus: Bus) -> Non
 
     assert got_start is True
     assert isinstance(raised, asyncio.TimeoutError)
+
+
+async def test_stream_handler_error_code_is_agent_unavailable(bus: Bus) -> None:
+    """Handler exception → ResponseError with code=AGENT_UNAVAILABLE."""
+    async def handler(_: Envelope, w: StreamWriter) -> None:
+        await w.started(None)
+        raise RuntimeError("kaboom")
+
+    await bus.handle_stream("unavail", handler)
+
+    s = await bus.stream_invoke("unavail", None)
+    last: Envelope | None = None
+    try:
+        async for env in s:
+            last = env
+    finally:
+        await s.close()
+
+    assert last is not None
+    assert last.event_type == ResponseError
+    err = last.payload_json()
+    assert err["code"] == CodeAgentUnavailable
+    assert err["retryable"] is False
+
+
+async def test_stream_idle_timeout_error_code_is_agent_timeout(bus: Bus) -> None:
+    """Idle timeout → runtime auto-emits ResponseError with code=AGENT_TIMEOUT."""
+    hold = asyncio.Event()
+
+    async def handler(_: Envelope, w: StreamWriter) -> None:
+        await w.started(None)
+        try:
+            await asyncio.wait_for(hold.wait(), 5.0)
+        except asyncio.TimeoutError:
+            pass
+
+    await bus.handle_stream("idle-timeout-err", handler)
+
+    s = await bus.stream_invoke("idle-timeout-err", None, WithIdleTimeout(0.05))
+    last: Envelope | None = None
+    try:
+        async for env in s:
+            last = env
+    except ErrIdleTimeout:
+        pass
+    finally:
+        hold.set()
+        await s.close()
+
+    # When idle timeout fires, the runtime auto-emits a ResponseError envelope
+    # with code=AGENT_TIMEOUT before raising ErrIdleTimeout on the consumer side.
+    if last is not None and last.event_type == ResponseError:
+        err = last.payload_json()
+        assert err["code"] == CodeAgentTimeout
+        assert err["retryable"] is True
 
 
 async def test_stream_close_unblocks_iteration(bus: Bus) -> None:
