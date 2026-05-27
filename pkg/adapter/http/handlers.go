@@ -116,12 +116,13 @@ func (a *Adapter) handleStream(w http.ResponseWriter, r *http.Request) {
 	rc := http.NewResponseController(w)
 	_ = rc.Flush()
 
+	retryMs := a.sseRetry.Milliseconds()
 	for frame, ferr := range s.Events() {
 		if ferr != nil {
-			writeSSEError(w, rc, ferr)
+			writeSSEError(w, rc, ferr, retryMs)
 			return
 		}
-		if err := writeSSEEnvelope(w, rc, frame); err != nil {
+		if err := writeSSEEnvelope(w, rc, frame, retryMs); err != nil {
 			a.log.Warn("http: sse write failed",
 				"err", err,
 				"target", target,
@@ -173,7 +174,7 @@ func (a *Adapter) handlePublish(w http.ResponseWriter, r *http.Request) {
 //
 // followed by a blank line. The writer is flushed so each frame reaches the
 // client immediately.
-func writeSSEEnvelope(w http.ResponseWriter, rc *http.ResponseController, env *event.Envelope) error {
+func writeSSEEnvelope(w http.ResponseWriter, rc *http.ResponseController, env *event.Envelope, retryMs int64) error {
 	body, err := json.Marshal(env)
 	if err != nil {
 		return err
@@ -186,6 +187,11 @@ func writeSSEEnvelope(w http.ResponseWriter, rc *http.ResponseController, env *e
 			return err
 		}
 	}
+	if retryMs > 0 {
+		if _, err := fmt.Fprintf(w, "retry: %d\n", retryMs); err != nil {
+			return err
+		}
+	}
 	if _, err := fmt.Fprintf(w, "data: %s\n\n", body); err != nil {
 		return err
 	}
@@ -195,7 +201,7 @@ func writeSSEEnvelope(w http.ResponseWriter, rc *http.ResponseController, env *e
 // writeSSEError emits a synthetic agent.response.error frame derived from a
 // Bus-side error (idle/overall timeout, ctx cancel, decode error). Used when
 // Stream.Events() yields a non-nil error.
-func writeSSEError(w http.ResponseWriter, rc *http.ResponseController, srcErr error) {
+func writeSSEError(w http.ResponseWriter, rc *http.ResponseController, srcErr error, retryMs int64) {
 	code := event.CodeAgentUnavailable
 	switch {
 	case errors.Is(srcErr, context.DeadlineExceeded), errors.Is(srcErr, bus.ErrIdleTimeout):
@@ -208,5 +214,5 @@ func writeSSEError(w http.ResponseWriter, rc *http.ResponseController, srcErr er
 		Message: srcErr.Error(),
 	})
 	frame.Payload = body
-	_ = writeSSEEnvelope(w, rc, frame)
+	_ = writeSSEEnvelope(w, rc, frame, retryMs)
 }

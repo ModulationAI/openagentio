@@ -35,13 +35,14 @@ type Middleware func(http.Handler) http.Handler
 // Adapter implements http.Handler. Construct with New, then mount on any
 // http.Server: srv := &http.Server{Handler: New(b)}.
 type Adapter struct {
-	bus     bus.Bus
-	log     *slog.Logger
-	auth    AuthFunc
-	timeout time.Duration
-	idle    time.Duration
-	mws     []Middleware
-	handler http.Handler
+	bus      bus.Bus
+	log      *slog.Logger
+	auth     AuthFunc
+	timeout  time.Duration
+	idle     time.Duration
+	sseRetry time.Duration
+	mws      []Middleware
+	handler  http.Handler
 }
 
 // New constructs an Adapter wrapping the given Bus. The Adapter holds no
@@ -49,10 +50,11 @@ type Adapter struct {
 // caller's responsibility.
 func New(b bus.Bus, opts ...Option) *Adapter {
 	a := &Adapter{
-		bus:     b,
-		log:     slog.Default(),
-		timeout: defaultTimeout,
-		idle:    defaultIdleTimeout,
+		bus:      b,
+		log:      slog.Default(),
+		timeout:  defaultTimeout,
+		idle:     defaultIdleTimeout,
+		sseRetry: 3 * time.Second,
 	}
 	for _, opt := range opts {
 		opt(a)

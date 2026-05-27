@@ -41,3 +41,9 @@ func WithIdleTimeout(d time.Duration) Option {
 func WithMiddleware(mw ...Middleware) Option {
 	return func(a *Adapter) { a.mws = append(a.mws, mw...) }
 }
+
+// WithSSERetry sets the retry interval sent to SSE clients in the retry:
+// field (milliseconds). Zero disables the field. Default is 3s.
+func WithSSERetry(d time.Duration) Option {
+	return func(a *Adapter) { a.sseRetry = d }
+}
