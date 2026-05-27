@@ -15,6 +15,16 @@ const maxBodyBytes = 4 << 20 // 4 MiB cap to keep gateway memory bounded
 // correlation/tenancy fields, body becomes Payload (raw JSON), and AuthContext
 // (if present) overrides any header-derived values.
 //
+//	HTTP Header          → Envelope Field
+//	---------------------+------------------
+//	X-Trace-Id           → TraceID
+//	X-Traceparent        → Traceparent
+//	X-Tenant-Id          → TenantID
+//	X-Session-Id         → SessionID
+//	X-Conversation-Id    → ConversationID
+//	X-User-Id            → UserID
+//	X-Channel            → Channel
+//
 // eventType is empty for invoke/stream requests (Bus picks
 // MessageReceived) and set for /v1/events publishes.
 func readEnvelope(r *http.Request, eventType string, ac *AuthContext) (*event.Envelope, error) {
